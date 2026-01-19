@@ -1,9 +1,113 @@
-<h2>LOGIN</h2>
-<form method="POST">
-  <input type="text" name="username" placeholder="User" />
-  <input type="password" name="password" placeholder="Pass" />
-  <button>Enter</button>
-</form>
-{% with messages = get_flashed_messages() %} {% if messages %}
-<div style="color: red">{{ messages[0] }}</div>
-{% endif %} {% endwith %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Brain | Access</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="split-screen">
+      <div class="left-pane">
+        <div id="fluid-container"></div>
+        <div class="overlay"></div>
+
+        <div class="carousel-container">
+          <div class="quote-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H15.017C14.4647 8 14.017 8.44772 14.017 9V11C14.017 11.5523 13.5693 12 13.017 12H12.017V5H22.017V15C22.017 18.3137 19.3307 21 16.017 21H14.017ZM5.01697 21L5.01697 18C5.01697 16.8954 5.9124 16 7.01697 16H10.017C10.5693 16 11.017 15.5523 11.017 15V9C11.017 8.44772 10.5693 8 10.017 8H6.01697C5.46468 8 5.01697 8.44772 5.01697 9V11C5.01697 11.5523 4.56925 12 4.01697 12H3.01697V5H13.017V15C13.017 18.3137 10.3307 21 7.01697 21H5.01697Z"
+              ></path>
+            </svg>
+          </div>
+
+          <div class="carousel-content">
+            <p class="quote-text" id="quote-text">Loading wisdom...</p>
+            <div class="quote-author">
+              <span id="quote-author"></span>
+              <span id="quote-role"></span>
+            </div>
+          </div>
+
+          <div class="carousel-dots">
+            <span class="dot active"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-pane">
+        <div class="login-box">
+          <h1>Welcome to My Brain</h1>
+          <p class="sub-header">
+            Don't have an account? <a href="#">Click here</a>
+          </p>
+
+          <form method="POST">
+            <div class="input-group">
+              <label for="username">Username</label>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                value="admin"
+                required
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="input-group">
+              <label for="password">Password</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value="123"
+                required
+              />
+            </div>
+
+            <button type="submit" class="btn-primary">Login</button>
+          </form>
+
+          <p class="footer-link">
+            Forgot your password? <a href="#">Click here</a>
+          </p>
+
+          {% with messages = get_flashed_messages() %} {% if messages %}
+          <div class="flash-error">{{ messages[0] }}</div>
+          {% endif %} {% endwith %}
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+        }
+      }
+    </script>
+
+    <script
+      type="module"
+      src="{{ url_for('static', filename='js/fluid.js') }}"
+    ></script>
+
+    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+  </body>
+</html>
