@@ -1,3 +1,65 @@
-<h1>Welcome, {{ user.username }}!</h1>
-<p>Role: {{ user.role }}</p>
-<a href="/logout">Logout</a>
+{% extends "base.html" %} {% block content %}
+<div class="dashboard-grid">
+  <div class="welcome-banner">
+    <h1>Welcome back, {{ current_user.username }}</h1>
+    <p>System operational. What shall we focus on today?</p>
+  </div>
+
+  <div class="section-container apps-section">
+    <h3><i class="ph ph-grid-nine"></i> Applications</h3>
+    <div class="app-grid">
+      <div class="app-card">
+        <div class="app-icon" style="background: #eab308">
+          <i class="ph ph-folder"></i>
+        </div>
+        <h4>Files</h4>
+        <span>Coming Soon</span>
+      </div>
+      <div class="app-card">
+        <div class="app-icon" style="background: #3b82f6">
+          <i class="ph ph-terminal-window"></i>
+        </div>
+        <h4>Terminal</h4>
+        <span>Coming Soon</span>
+      </div>
+      <div class="app-card">
+        <div class="app-icon" style="background: #10b981">
+          <i class="ph ph-chart-line-up"></i>
+        </div>
+        <h4>Analytics</h4>
+        <span>Coming Soon</span>
+      </div>
+      <div class="app-card add-new">
+        <i class="ph ph-plus"></i>
+        <h4>Add App</h4>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-container todo-section">
+    <div class="section-header">
+      <h3><i class="ph ph-check-circle"></i> Priority Tasks</h3>
+      <button class="icon-btn"><i class="ph ph-plus"></i></button>
+    </div>
+
+    <div class="todo-list">
+      <div class="todo-item">
+        <input type="checkbox" id="t1" />
+        <label for="t1">Connect Google Tasks API</label>
+      </div>
+      <div class="todo-item">
+        <input type="checkbox" id="t2" />
+        <label for="t2">Design Server Stats Widget</label>
+      </div>
+      <div class="todo-item">
+        <input type="checkbox" id="t3" checked />
+        <label for="t3">Finish Login Screen UI</label>
+      </div>
+      <div class="todo-item">
+        <input type="checkbox" id="t4" />
+        <label for="t4">Buy more coffee ☕</label>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
