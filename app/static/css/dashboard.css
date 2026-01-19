@@ -214,80 +214,98 @@
    ========================================= */
 @media (max-width: 768px) {
     
-    /* 1. Turn Sidebar into Bottom Nav Bar */
+    /* 1. ALLOW SCROLLING (Crucial Fix) */
     .dashboard-body {
         flex-direction: column;
-        height: auto;
+        height: auto;       /* Let it grow vertically */
         min-height: 100vh;
+        overflow-y: auto;   /* Enable vertical scrolling */
+        overflow-x: hidden; /* Prevent horizontal side-scroll */
     }
 
+    /* 2. Turn Sidebar into Bottom Nav Bar */
     .sidebar {
         position: fixed;
         bottom: 0;
         left: 0;
         width: 100%;
         height: 70px;
-        flex-direction: row; /* Horizontal alignment */
+        flex-direction: row;
         align-items: center;
         justify-content: space-between;
-        padding: 10px 20px;
+        padding: 0 20px;
         z-index: 1000;
-        background-color: #0a1410;
+        background-color: #0a1410; /* Dark background */
         border-right: none;
         border-top: 1px solid rgba(255,255,255,0.1);
         box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
     }
 
-    /* Hide Logo and Footer text on mobile */
     .sidebar-header, .sidebar-footer {
-        display: none;
+        display: none; /* Hide logo/logout to save space */
     }
 
-    /* Horizontal Links */
+    /* 3. Horizontal Navigation Links */
     .nav-links {
         display: flex;
         flex-direction: row;
         width: 100%;
         justify-content: space-around;
         padding: 0;
+        margin: 0;
     }
 
     .nav-links li {
         margin-bottom: 0;
+        width: 100%; /* Equal width touch targets */
     }
 
     .nav-links a {
         flex-direction: column; /* Icon top, text bottom */
-        gap: 4px;
-        padding: 8px;
-        font-size: 0.7rem; /* Tiny text */
+        gap: 6px;
+        padding: 8px 0;
+        font-size: 0.7rem;
+        justify-content: center;
+        border-radius: 0; /* Remove rounded corners for tab look */
     }
 
     .nav-links a i {
-        font-size: 1.4rem; /* Big icons */
+        font-size: 1.5rem;
     }
 
-    /* 2. Fix Main Content Scrolling */
+    /* 4. Main Content Fixes */
     .main-content {
-        height: auto;
-        padding-bottom: 80px; /* Space for bottom nav */
+        height: auto;          /* Don't force 100% height */
+        padding-bottom: 100px; /* EXTRA padding so content isn't hidden behind the bottom bar */
+        overflow: visible;     /* Let content flow naturally */
     }
 
     .top-bar {
         padding: 0 20px;
+        position: relative; /* Unstick the top bar on mobile if it takes too much space */
     }
 
     .content-wrapper {
         padding: 20px;
+        width: 100%;
     }
 
-    /* 3. Stack the Grid (1 Column) */
+    /* 5. Stack the Grid (1 Column) */
     .dashboard-grid {
-        grid-template-columns: 1fr; /* Single column */
+        display: flex; /* Flex is safer than grid for simple mobile stacking */
+        flex-direction: column;
         gap: 20px;
     }
 
+    .welcome-banner {
+        padding: 30px 20px;
+    }
+    
     .welcome-banner h1 {
-        font-size: 1.5rem;
+        font-size: 1.6rem;
+    }
+    
+    .app-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 Columns for apps is better than 1 on mobile */
     }
 }
