@@ -6,26 +6,30 @@ from . import db
 main = Blueprint('main', __name__)
 auth = Blueprint('auth', __name__)
 
+
 @main.route('/')
 @login_required
 def dashboard():
     return render_template('main/dashboard.html', user=current_user)
+
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
+
         user = User.query.filter_by(username=username).first()
 
-        if user and user.password == password:
+        # SECURE CHECK: Use the new check_password() method
+        if user and user.check_password(password):
             login_user(user)
             return redirect(url_for('main.dashboard'))
         else:
             flash('Access Denied: Invalid credentials')
 
     return render_template('auth/login.html')
+
 
 @auth.route('/logout')
 @login_required
