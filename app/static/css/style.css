@@ -244,3 +244,35 @@ h1 {
     font-size: 0.9rem;
     text-align: center;
 }
+
+/* =========================================
+   MOBILE RESPONSIVENESS (Login)
+   ========================================= */
+@media (max-width: 768px) {
+    /* Stack the layout vertically (though we hide one side anyway) */
+    .split-screen {
+        flex-direction: column;
+    }
+
+    /* Hide the heavy fluid animation/quotes on mobile to save battery/space */
+    .left-pane {
+        display: none;
+    }
+
+    /* Make the login form take the full screen */
+    .right-pane {
+        width: 100vw;
+        height: 100vh;
+        padding: 20px;
+        border-left: none; /* Remove the separator line */
+    }
+
+    .login-box {
+        max-width: 100%;
+        padding: 0;
+    }
+
+    h1 {
+        font-size: 1.8rem; /* Slightly smaller text */
+    }
+}

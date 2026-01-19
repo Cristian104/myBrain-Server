@@ -208,3 +208,86 @@
 
 .todo-item input:checked + label { text-decoration: line-through; opacity: 0.5; color: var(--text-gray); }
 .todo-item label { cursor: pointer; font-size: 0.95rem; }
+
+/* =========================================
+   MOBILE RESPONSIVENESS (Dashboard)
+   ========================================= */
+@media (max-width: 768px) {
+    
+    /* 1. Turn Sidebar into Bottom Nav Bar */
+    .dashboard-body {
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .sidebar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 70px;
+        flex-direction: row; /* Horizontal alignment */
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 20px;
+        z-index: 1000;
+        background-color: #0a1410;
+        border-right: none;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+    }
+
+    /* Hide Logo and Footer text on mobile */
+    .sidebar-header, .sidebar-footer {
+        display: none;
+    }
+
+    /* Horizontal Links */
+    .nav-links {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        justify-content: space-around;
+        padding: 0;
+    }
+
+    .nav-links li {
+        margin-bottom: 0;
+    }
+
+    .nav-links a {
+        flex-direction: column; /* Icon top, text bottom */
+        gap: 4px;
+        padding: 8px;
+        font-size: 0.7rem; /* Tiny text */
+    }
+
+    .nav-links a i {
+        font-size: 1.4rem; /* Big icons */
+    }
+
+    /* 2. Fix Main Content Scrolling */
+    .main-content {
+        height: auto;
+        padding-bottom: 80px; /* Space for bottom nav */
+    }
+
+    .top-bar {
+        padding: 0 20px;
+    }
+
+    .content-wrapper {
+        padding: 20px;
+    }
+
+    /* 3. Stack the Grid (1 Column) */
+    .dashboard-grid {
+        grid-template-columns: 1fr; /* Single column */
+        gap: 20px;
+    }
+
+    .welcome-banner h1 {
+        font-size: 1.5rem;
+    }
+}
