@@ -3,63 +3,82 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Brain | {% block title %}Dashboard{% endblock %}</title>
+    <title>MyBrain Server</title>
+
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
 
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
-
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/dashboard.css') }}"
+      media="screen and (max-width: 768px)"
+      href="{{ url_for('static', filename='css/mobile.css') }}"
     />
-
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
   </head>
-  <body class="dashboard-body">
-    <nav class="sidebar">
-      <div class="sidebar-header">
-        <div class="logo-icon">🧠</div>
-        <span class="logo-text">My Brain</span>
-      </div>
-
-      <ul class="nav-links">
-        <li class="active">
-          <a href="#"><i class="ph ph-squares-four"></i> Dashboard</a>
-        </li>
-        <li>
-          <a href="#"><i class="ph ph-list-checks"></i> Tasks</a>
-        </li>
-        <li>
-          <a href="#"><i class="ph ph-cpu"></i> Server Status</a>
-        </li>
-        <li>
-          <a href="#"><i class="ph ph-gear"></i> Settings</a>
-        </li>
-      </ul>
-
-      <div class="sidebar-footer">
-        <a href="{{ url_for('auth.logout') }}" class="logout-btn">
-          <i class="ph ph-sign-out"></i> Logout
-        </a>
-      </div>
-    </nav>
-
-    <main class="main-content">
-      <header class="top-bar">
-        <div class="breadcrumbs">Home / Dashboard</div>
-        <div class="user-profile">
-          <span>{{ current_user.username }}</span>
-          <div class="avatar">{{ current_user.username[0].upper() }}</div>
+  <body>
+    <div class="main-wrapper">
+      <nav class="sidebar">
+        <div class="logo-area">
+          <i class="fas fa-brain"></i>
+          <span class="logo-text">MyBrain</span>
         </div>
-      </header>
 
-      <div class="content-wrapper">{% block content %}{% endblock %}</div>
-    </main>
+        <ul class="nav-links">
+          <li class="{{ 'active' if request.endpoint == 'main.dashboard' }}">
+            <a href="{{ url_for('main.dashboard') }}">
+              <i class="fas fa-th-large"></i>
+              <span class="link-text">Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <i class="fas fa-tasks"></i>
+              <span class="link-text">Tasks</span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <i class="fas fa-server"></i>
+              <span class="link-text">Server</span>
+            </a>
+          </li>
+          <li>
+            <a href="#">
+              <i class="fas fa-cog"></i>
+              <span class="link-text">Settings</span>
+            </a>
+          </li>
+        </ul>
+
+        <div class="user-area">
+          <div class="user-avatar">{{ current_user.username[0].upper() }}</div>
+          <div class="user-info">
+            <span class="name">{{ current_user.username }}</span>
+            <a href="{{ url_for('auth.logout') }}" class="logout-link"
+              >Logout</a
+            >
+          </div>
+        </div>
+      </nav>
+
+      <main class="content-area">
+        {% with messages = get_flashed_messages() %} {% if messages %}
+        <div class="flash-messages">
+          {% for message in messages %}
+          <div class="alert">{{ message }}</div>
+          {% endfor %}
+        </div>
+        {% endif %} {% endwith %} {% block content %}{% endblock %}
+      </main>
+    </div>
   </body>
 </html>

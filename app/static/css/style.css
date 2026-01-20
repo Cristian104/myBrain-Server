@@ -9,6 +9,10 @@
     --accent-blue: #3b5bdb;    /* The specific blue from the reference */
     --accent-blue-hover: #2c44a8;
     --card-bg: rgba(20, 22, 27, 0.75); /* Semi-transparent box for quotes */
+    --success-green: #2ecc71;
+    --warning-orange: #e67e22;
+    --danger-red: #e74c3c;
+    --card-surface: #1e2227;   /* For Dashboard Cards */
 }
 
 /* --- Reset & Base Styles --- */
@@ -20,75 +24,71 @@
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    height: 100vh;
+    min-height: 100vh;
     background-color: var(--bg-dark-right);
     color: var(--text-white);
-    overflow: hidden; /* No scrolling on login page */
-    cursor: default;  /* FIX: Prevents text cursor from appearing on headers */
+    /* overflow: hidden;  <-- REMOVED: We need scrolling for the Dashboard */
+    cursor: default; 
 }
+
+/* =========================================
+   LOGIN SCREEN STYLES
+   ========================================= */
 
 /* --- Main Layout --- */
 .split-screen {
     display: flex;
     height: 100vh;
     width: 100vw;
+    overflow: hidden; /* Only lock scroll on the login page wrapper */
 }
 
 /* --- LEFT PANE (Fluid Animation & Carousel) --- */
 .left-pane {
-    flex: 1.4; /* Takes up 1.4x more space than right side */
+    flex: 1.4;
     position: relative;
-    background-color: var(--bg-dark-left); /* Dark green base */
-    
-    /* Centering the Quote Box */
+    background-color: var(--bg-dark-left);
     display: flex;
     align-items: center;
     justify-content: center;
-    
-    /* Disable text selection on the background */
     user-select: none; 
 }
 
-/* The Container for the Fluid Canvas */
 #fluid-container {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    z-index: 0; /* Sits behind the overlay */
-    pointer-events: auto; /* Catches mouse movements */
+    z-index: 0;
+    pointer-events: auto;
 }
 
 #fluid-container canvas {
     width: 100%;
     height: 100%;
     display: block;
-    filter: blur(20px); /* Makes the fluid look undefined/blurry */
+    filter: blur(20px);
 }
 
-/* Dark overlay to ensure text readability over the fluid */
 .left-pane .overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
     background: linear-gradient(to right, rgba(0,0,0,0.5), rgba(0,0,0,0.1));
-    z-index: 1; /* Sits on top of fluid */
-    pointer-events: none; /* Let mouse clicks pass through to fluid */
+    z-index: 1;
+    pointer-events: none;
 }
 
-/* The Glass Box for Quotes */
 .carousel-container {
     position: relative;
-    z-index: 2; /* Sits on top of everything */
+    z-index: 2;
     background-color: var(--card-bg);
     padding: 40px 50px;
     border-radius: 24px;
     max-width: 550px;
     width: 80%;
-    backdrop-filter: blur(20px); /* Frosted glass effect */
+    backdrop-filter: blur(20px);
     border: 1px solid rgba(255,255,255,0.08);
     box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-    
-    /* FIX: Smooth Height Animation Configuration */
     transition: height 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
-    overflow: hidden; /* Keeps content inside while shrinking */
+    overflow: hidden;
 }
 
 .quote-icon svg {
@@ -98,7 +98,6 @@ body {
     margin-bottom: 20px;
 }
 
-/* Wrapper for fading text in/out */
 .carousel-content {
     transition: opacity 0.5s ease, transform 0.5s ease;
     opacity: 1;
@@ -110,7 +109,6 @@ body {
     line-height: 1.5;
     font-weight: 500;
     margin-bottom: 24px;
-    /* Min-height prevents box from collapsing to zero if text is missing */
     min-height: 80px; 
 }
 
@@ -128,12 +126,11 @@ body {
     margin-top: 4px;
 }
 
-/* Pagination Dots */
 .carousel-dots { margin-top: 30px; display: flex; gap: 6px; }
 
 .dot {
     height: 4px; 
-    width: 20px; /* Modern "Bar" style dots */
+    width: 20px; 
     background-color: rgba(255,255,255,0.2);
     border-radius: 2px;
     transition: 0.3s;
@@ -144,7 +141,6 @@ body {
     width: 40px; 
 }
 
-
 /* --- RIGHT PANE (Login Form) --- */
 .right-pane {
     flex: 1;
@@ -152,7 +148,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-left: 1px solid rgba(255,255,255,0.05); /* Subtle separator */
+    border-left: 1px solid rgba(255,255,255,0.05);
 }
 
 .login-box {
@@ -183,7 +179,6 @@ h1 {
     color: #5c7cfa;
 }
 
-/* Form Styling */
 .input-group { margin-bottom: 20px; }
 
 .input-group label {
@@ -234,7 +229,6 @@ h1 {
     font-size: 0.85rem;
 }
 
-/* Error Messages (Flash) */
 .flash-error {
     color: #ff6b6b;
     background: rgba(255,107,107,0.1);
@@ -246,33 +240,372 @@ h1 {
 }
 
 /* =========================================
-   MOBILE RESPONSIVENESS (Login)
+   DASHBOARD STYLES (NEW)
+   ========================================= */
+
+.dashboard-content {
+    padding: 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* 1. Welcome Banner */
+.welcome-banner {
+    background: var(--accent-blue);
+    padding: 40px;
+    border-radius: 16px;
+    margin-bottom: 40px;
+    box-shadow: 0 10px 30px rgba(59, 91, 219, 0.2);
+}
+
+.welcome-banner h1 {
+    font-size: 2.2rem;
+    margin-bottom: 10px;
+    color: white;
+}
+
+.welcome-banner p {
+    color: rgba(255,255,255,0.8);
+    font-size: 1.1rem;
+}
+
+/* 2. Stats Grid */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: var(--card-surface);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border: 1px solid rgba(255,255,255,0.05);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.cpu-color { background: rgba(52, 152, 219, 0.15); color: #3498db; }
+.ram-color { background: rgba(46, 204, 113, 0.15); color: #2ecc71; }
+.disk-color { background: rgba(230, 126, 34, 0.15); color: #e67e22; }
+
+.stat-details { flex: 1; }
+
+.stat-details h3 {
+    font-size: 0.8rem;
+    color: var(--text-gray);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-details h2 {
+    font-size: 1.8rem;
+    color: white;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+/* Progress Bars */
+.progress-track {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.cpu-fill { background: #3498db; }
+.ram-fill { background: #2ecc71; }
+.disk-fill { background: #e67e22; }
+
+/* 3. Split Layout (Apps & Tasks) */
+.dashboard-split {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* Left 66%, Right 33% */
+    gap: 30px;
+}
+
+.section-header {
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 10px;
+}
+.section-header h2 {
+    font-size: 1.2rem;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Apps Grid */
+.apps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 20px;
+}
+
+.app-card {
+    background: var(--card-surface);
+    padding: 25px 15px;
+    border-radius: 12px;
+    text-align: center;
+    color: #eee;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-card:hover {
+    transform: translateY(-4px);
+    background: #252a30;
+    border-color: var(--accent-blue);
+}
+
+.app-icon { font-size: 2rem; margin-bottom: 15px; color: var(--accent-blue); }
+
+.app-card.add-new {
+    border: 2px dashed #444;
+    background: transparent;
+}
+.app-card.add-new:hover {
+    border-color: var(--accent-blue);
+}
+
+/* Tasks Widget */
+.tasks-card {
+    background: var(--card-surface);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.task-row {
+    display: flex;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    gap: 15px;
+}
+.task-row:last-of-type { border-bottom: none; }
+
+.task-status { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.task-status.urgent { background: var(--danger-red); box-shadow: 0 0 8px var(--danger-red); }
+.task-status.normal { background: var(--accent-blue); }
+
+.task-info { flex: 1; display: flex; flex-direction: column; }
+.task-title { font-weight: 500; font-size: 0.95rem; color: white; }
+.task-meta { font-size: 0.75rem; color: var(--text-gray); margin-top: 2px; }
+
+.btn-check {
+    background: transparent;
+    border: 1px solid #444;
+    color: #666;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-check:hover { background: var(--success-green); border-color: var(--success-green); color: #fff; }
+
+.view-all-tasks {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: var(--accent-blue);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+/* =========================================
+   MOBILE RESPONSIVENESS
    ========================================= */
 @media (max-width: 768px) {
-    /* Stack the layout vertically (though we hide one side anyway) */
-    .split-screen {
-        flex-direction: column;
+    /* Login Mobile */
+    .split-screen { flex-direction: column; }
+    .left-pane { display: none; }
+    .right-pane { width: 100vw; height: 100vh; padding: 20px; border-left: none; }
+    .login-box { max-width: 100%; padding: 0; }
+    
+    /* Dashboard Mobile adjustments are handled by mobile.css, 
+       but basic overrides here prevent breakage if mobile.css fails to load */
+    .stats-row { grid-template-columns: 1fr; }
+    .dashboard-split { grid-template-columns: 1fr; }
+}
+
+/* =========================================
+   SIDEBAR & LAYOUT (New Addition)
+   ========================================= */
+
+.main-wrapper {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+}
+
+/* Sidebar Defaults (Expanded) */
+.sidebar {
+    width: 260px;
+    background: #0d1117; /* Very dark sidebar */
+    border-right: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    position: fixed; /* Stays in place */
+    height: 100vh;
+    transition: width 0.3s ease;
+    z-index: 100;
+}
+
+.content-area {
+    margin-left: 260px; /* Push content to right of sidebar */
+    flex: 1;
+    padding: 30px;
+    transition: margin-left 0.3s ease;
+    width: calc(100% - 260px);
+}
+
+/* Logo Area */
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-white);
+    margin-bottom: 40px;
+    padding-left: 10px;
+}
+.logo-area i { color: var(--accent-blue); }
+
+/* Nav Links */
+.nav-links { list-style: none; flex: 1; }
+.nav-links li { margin-bottom: 8px; }
+
+.nav-links a {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 15px;
+    color: var(--text-gray);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.2s;
+    white-space: nowrap; /* Prevent text wrapping when shrinking */
+    overflow: hidden;
+}
+
+.nav-links a:hover, .nav-links li.active a {
+    background: rgba(59, 91, 219, 0.1);
+    color: var(--accent-blue);
+}
+
+.nav-links i { width: 20px; text-align: center; font-size: 1.1rem; }
+
+/* User Area at Bottom */
+.user-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.user-avatar {
+    width: 36px; height: 36px;
+    background: var(--accent-blue);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+}
+
+.user-info { display: flex; flex-direction: column; }
+.user-info .name { font-size: 0.9rem; font-weight: 600; color: white; }
+.logout-link { font-size: 0.75rem; color: var(--text-gray); text-decoration: none; }
+.logout-link:hover { color: var(--danger-red); }
+
+
+/* =========================================
+   RESPONSIVE: "LAPTOP MODE" (1200px and below)
+   ========================================= */
+@media (max-width: 1200px) {
+    
+    /* 1. Shrink Sidebar to Icons Only */
+    .sidebar {
+        width: 80px; /* Small width */
+        padding: 20px 10px;
+        align-items: center;
+    }
+    
+    .content-area {
+        margin-left: 80px; /* Adjust content margin */
+        width: calc(100% - 80px);
     }
 
-    /* Hide the heavy fluid animation/quotes on mobile to save battery/space */
-    .left-pane {
-        display: none;
+    /* Hide Text Labels */
+    .logo-text, .link-text, .user-info {
+        display: none; /* Hide text */
     }
 
-    /* Make the login form take the full screen */
-    .right-pane {
-        width: 100vw;
-        height: 100vh;
-        padding: 20px;
-        border-left: none; /* Remove the separator line */
+    .logo-area { margin-bottom: 30px; padding-left: 0; justify-content: center; }
+    .nav-links a { justify-content: center; padding: 12px; }
+    .user-area { border-top: none; justify-content: center; }
+    
+    /* 2. Make Dashboard Grid Wrap */
+    .dashboard-split {
+        grid-template-columns: 1fr; /* Stack Left/Right panels */
+        gap: 30px;
     }
+    
+    /* Make the Apps Grid stretch to fill the new full width */
+    .panel-left { width: 100%; }
+    .panel-right { width: 100%; }
 
-    .login-box {
-        max-width: 100%;
-        padding: 0;
+    /* 3. Keep Stats in a row, but maybe smaller? */
+    .stats-row {
+        gap: 15px;
     }
+    .stat-card {
+        padding: 15px; /* Save space */
+    }
+    .stat-details h2 { font-size: 1.4rem; }
+}
 
-    h1 {
-        font-size: 1.8rem; /* Slightly smaller text */
+/* =========================================
+   RESPONSIVE: "TABLET PORTRAIT" (900px and below)
+   ========================================= */
+@media (max-width: 900px) {
+    /* If it gets really narrow, let the stats wrap */
+    .stats-row {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     }
 }
