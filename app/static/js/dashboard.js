@@ -32,9 +32,14 @@ function toggleQuickAdd() {
 function handleQuickEnter(e) {
     if(e.key === 'Enter') {
         const content = e.target.value;
+        // NEW: Get the category from the dropdown next to the input
+        const categorySelect = document.getElementById('quick-category');
+        const category = categorySelect ? categorySelect.value : 'general';
+
         if(content) {
-            // Send with defaults: normal, blue, no date
-            createTaskAPI(content, 'normal', null, '#3b5bdb');
+            // Send with defaults: normal, blue, no date + Selected Category
+            createTaskAPI(content, 'normal', null, '#3b5bdb', category);
+            
             e.target.value = ''; // Clear input
             toggleQuickAdd(); // Hide row
         }
@@ -56,6 +61,7 @@ function openModal(isEdit = false) {
         // Clear form for new task
         document.getElementById('m-content').value = '';
         document.getElementById('m-date').value = '';
+        document.getElementById('m-category').value = 'general'; // Default
         editingTaskId = null;
     }
     modal.classList.add('active');
@@ -64,18 +70,21 @@ function openModal(isEdit = false) {
 function closeModal() { document.getElementById('task-modal').classList.remove('active'); }
 function selectColor(hex) { document.getElementById('m-color').value = hex; }
 
-// Triggered by clicking a task row
-function editTask(id, content, priority, date, color) {
-    editingTaskId = id;
+// Triggered by clicking a task row (Updated to use Data Attributes)
+function editTask(element) {
+    // Read from the clicked element's data attributes
+    editingTaskId = element.getAttribute('data-id');
     
-    document.getElementById('m-content').value = content;
-    document.getElementById('m-priority').value = priority;
-    document.getElementById('m-color').value = color;
-    
-    // Date formatting helper
-    if(date && date !== 'None') {
+    document.getElementById('m-content').value = element.getAttribute('data-content');
+    document.getElementById('m-priority').value = element.getAttribute('data-priority');
+    document.getElementById('m-color').value = element.getAttribute('data-color');
+    document.getElementById('m-recurrence').value = element.getAttribute('data-recurrence');
+    document.getElementById('m-category').value = element.getAttribute('data-category'); // NEW
+
+    const dateVal = element.getAttribute('data-date');
+    if(dateVal && dateVal !== 'None') {
         // Python format usually YYYY-MM-DD HH:MM:SS, we need YYYY-MM-DD
-        const cleanDate = date.split(' ')[0]; 
+        const cleanDate = dateVal.split(' ')[0]; 
         document.getElementById('m-date').value = cleanDate;
     } else {
         document.getElementById('m-date').value = '';
@@ -90,12 +99,12 @@ function submitTaskForm() {
     const priority = document.getElementById('m-priority').value;
     const date = document.getElementById('m-date').value;
     const color = document.getElementById('m-color').value;
-    const recurrence = document.getElementById('m-recurrence').value; // <--- Get value
+    const recurrence = document.getElementById('m-recurrence').value;
+    const category = document.getElementById('m-category').value; // NEW
 
     if(!content) return;
 
-    // ... inside your fetch call body ...
-    const payload = { content, priority, date, color, recurrence }; // <--- Include it
+    const payload = { content, priority, date, color, recurrence, category };
 
     if (editingTaskId) {
         fetch(`/api/tasks/${editingTaskId}/edit`, {
@@ -116,24 +125,40 @@ function submitTaskForm() {
     }
 }
 
-function createTaskAPI(content, priority, date, color) {
+// API Helper for Quick Add
+function createTaskAPI(content, priority, date, color, category = 'general') {
     fetch('/api/tasks/add', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ content, priority, date, color })
+        body: JSON.stringify({ content, priority, date, color, category })
     })
     .then(res => res.json())
     .then(data => {
         if(data.success) {
-            // Inject HTML (Keep your existing HTML injection logic here)
-            // For simplicity in this step, a reload ensures specific IDs are correct
             location.reload(); 
         }
     });
 }
 
-// --- 4. TWO-STEP DELETE LOGIC ---
-// --- 4. SMART DELETE LOGIC ---
+// --- 4. CATEGORY FILTERING (NEW) ---
+function filterTasks(category, btnElement) {
+    // 1. Visual update for buttons
+    document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+    btnElement.classList.add('active');
+
+    // 2. Filter Rows
+    const rows = document.querySelectorAll('.task-row');
+    rows.forEach(row => {
+        const rowCat = row.getAttribute('data-category');
+        if (category === 'all' || rowCat === category) {
+            row.style.display = 'flex';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// --- 5. SMART DELETE LOGIC ---
 function handleDeleteClick(event, id) {
     event.stopPropagation(); // Stop click from triggering "Edit"
     
@@ -154,7 +179,7 @@ function handleDeleteClick(event, id) {
             .then(data => {
                 if(data.success) row.remove();
             });
-        }, 500); // 500ms matches CSS
+        }, 300); // 300ms matches CSS
         
         deletePendingId = null; // Clear any pending state
     } else {
@@ -186,7 +211,7 @@ function handleOutsideClick(event) {
     }
 }
 
-// --- 5. TOGGLE Logic (Keep existing) ---
+// --- 6. TOGGLE Logic ---
 function toggleTask(id) {
     // Don't trigger edit
     if(event) event.stopPropagation(); 

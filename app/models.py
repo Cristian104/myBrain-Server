@@ -34,5 +34,5 @@ class Task(db.Model):
 
     # NEW COLUMN: 'none', 'daily', 'weekly'
     recurrence = db.Column(db.String(10), default='none')
-
+    category = db.Column(db.String(20), default='general')
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)

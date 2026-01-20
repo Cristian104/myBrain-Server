@@ -53,6 +53,9 @@ def add_task():
     color = data.get('color', '#3b5bdb')
     recurrence = data.get('recurrence', 'none')  # <--- Get it
 
+    # --- NEW: Get Category ---
+    category = data.get('category', 'general')
+
     # ... date logic ...
     date_str = data.get('date')
     due_date = None
@@ -68,6 +71,7 @@ def add_task():
             priority=priority,
             color=color,
             recurrence=recurrence,  # <--- Save it
+            category=category,  # <--- Add this
             due_date=due_date,
             author=current_user
         )
@@ -81,10 +85,14 @@ def add_task():
 @login_required
 def edit_task(id):
     task = Task.query.get_or_404(id)
+
+    # 1. Security Check
     if task.user_id != current_user.id:
         return jsonify({'success': False}), 403
 
     data = request.json
+
+    # 2. Update Standard Fields
     if 'content' in data:
         task.content = data['content']
     if 'priority' in data:
@@ -92,18 +100,30 @@ def edit_task(id):
     if 'color' in data:
         task.color = data['color']
     if 'recurrence' in data:
-        task.recurrence = data['recurrence']  # <--- Update it
+        task.recurrence = data['recurrence']
 
+    # --- NEW: Update Category ---
+    if 'category' in data:
+        task.category = data['category']
+    # ----------------------------
+
+    # 3. Update Date (Cleaned up logic)
     if 'date' in data:
-        # ... date logic ...
         date_str = data['date']
         if date_str:
             try:
+                # Expecting YYYY-MM-DD
                 task.due_date = datetime.strptime(date_str, '%Y-%m-%d')
             except ValueError:
+                # If date format is wrong, ignore or handle error
                 pass
         else:
+            # If empty string sent, clear the due date
             task.due_date = None
+
+    # 4. Save to DB
+    db.session.commit()
+    return jsonify({'success': True})
 
     db.session.commit()
     return jsonify({'success': True})
