@@ -1,31 +1,85 @@
+Markdown
+
 # 🧠 My Brain Portal - Documentation
 
 ## System Overview
-This is a custom Python web application acting as a login portal for `mybrain.world`.
-It runs as a background service on the server and is exposed to the internet via Nginx and Cloudflare.
+
+This is a custom Python web application acting as a dashboard and login portal for `mybrain.world`.
+It runs as a Docker container on the server and is exposed to the internet via Nginx and Cloudflare.
 
 **Flow:**
-`User` -> `Cloudflare Tunnel` -> `Nginx (Proxy)` -> `Python Flask App (Port 5000)`
+`User` -> `Cloudflare Tunnel` -> `Nginx (Proxy)` -> `Docker Container (Port 5000)` -> `Python Flask App`
 
 ---
 
 ## 📂 File Locations
 
-| Component | Path | Description |
-| :--- | :--- | :--- |
-| **App Folder** | `/home/jorg/mybrain-portal/` | Main project folder |
-| **Logic** | `~/mybrain-portal/app.py` | Python code (passwords, login logic) |
-| **Login Page** | `~/mybrain-portal/templates/login.html` | HTML for the login screen |
-| **Dashboard** | `~/mybrain-portal/templates/dashboard.html` | HTML for the main menu |
-| **Images** | `~/mybrain-portal/static/` | Logo and other assets |
-| **Service File** | `/etc/systemd/system/mybrain.service` | Auto-start configuration |
-| **Nginx Config** | `/etc/nginx/sites-available/default` | Web server proxy settings |
+| Component         | Path                         | Description                     |
+| :---------------- | :--------------------------- | :------------------------------ |
+| **Project Root**  | `/home/jorg/mybrain-portal/` | Main repository folder          |
+| **Database**      | `instance/db.sqlite`         | SQLite database (Tasks & Users) |
+| **Python App**    | `app/`                       | Source code (Routes, Models)    |
+| **Templates**     | `app/templates/`             | HTML files (Dashboard, Login)   |
+| **Static Assets** | `app/static/`                | CSS, JS, and Images             |
+| **Docker Config** | `docker-compose.yml`         | Container definitions           |
 
 ---
 
-## 🛠️ Management Cheat Sheet
+## 🚀 Deployment Workflow (QA to Production)
 
-### 1. Check Status
-See if the app is running or crashed.
+We use a **Git-based workflow**. Never edit files directly on the server (except `.env`).
+
+### 1. Work Locally (VS Code)
+
+1.  Create a branch for your new feature:
+    ```powershell
+    git checkout -b feature/my-cool-feature
+    ```
+2.  Make changes, test, and commit:
+    ```powershell
+    git add .
+    git commit -m "Added cool feature"
+    git push origin feature/my-cool-feature
+    ```
+3.  **Merge** the branch into `main` (via GitHub PR or Terminal).
+
+### 2. Deploy to Server (SSH)
+
+Connect to the server and pull the `main` branch.
+
 ```bash
-sudo systemctl status mybrain
+ssh jorg@172.22.198.147
+cd ~/mybrain-portal
+
+# 1. Get latest code
+git checkout main
+git pull origin main
+
+# 2. Rebuild Container (Required if Python/HTML changed)
+docker compose up -d --build
+🐳 Docker Cheat Sheet
+Check if it's running:
+
+Bash
+
+docker compose ps
+View Logs (Real-time):
+
+Bash
+
+docker compose logs -f
+Restart the App (Quick):
+
+Bash
+
+docker compose restart
+Full Reset (Fixes most "Stuck" errors): ⚠️ This destroys the container and rebuilds it. Data in volumes (DB) is safe.
+
+Bash
+
+docker compose down
+docker compose up -d --build
+
+### How to update it?
+You can just update this file in **VS Code**, commit it (`git commit -m "Update docs"`), push it, and pull it on the server. That acts as a great test of your new workflow!
+```
