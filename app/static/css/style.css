@@ -866,29 +866,63 @@ h1 {
 }
 
 /* --- QUICK ADD ROW (Hidden by default) --- */
+/* Update this section in style.css */
 .quick-add-row {
-    display: none; /* Hidden until "New" is clicked */
+    display: none;
     padding: 15px;
     background: var(--bg-dark-right);
     border-bottom: 1px solid rgba(255,255,255,0.1);
     gap: 10px;
     animation: slideDown 0.2s ease-out;
+    /* Ensure flex alignment */
+    display: flex; 
+    align-items: center;
+}
+
+/* Hide it properly when not active (override the display:flex above) */
+.quick-add-row:not(.active) {
+    display: none;
 }
 .quick-add-row.active {
     display: flex;
 }
-@keyframes slideDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
 
-.quick-add-input {
-    flex: 1;
+/* New Style for the Category Dropdown */
+.quick-select {
     background: #1a1d21;
     border: 1px solid #333;
+    color: var(--text-gray);
     padding: 8px 12px;
     border-radius: 6px;
+    outline: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+.quick-select:hover {
+    border-color: var(--accent-blue);
     color: white;
+}
+
+/* Ensure input takes remaining space */
+.quick-add-input {
+    flex: 1;                 /* Take remaining space */
+    background: #1a1d21;     /* Dark background */
+    border: 1px solid #333;  /* Subtle border matching the select box */
+    border-radius: 6px;      /* Rounded corners */
+    padding: 10px 14px;      /* Comfortable spacing */
+    color: white;            /* White text */
+    outline: none;           /* Remove blue browser glow */
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.quick-add-input::placeholder {
+    color: #555;             /* Dimmer placeholder text */
+}
+
+.quick-add-input:focus {
+    border-color: var(--accent-blue); /* Glow blue when typing */
+    background: #202429;     /* Slightly lighter focus state */
 }
 
 /* Make task title clickable for editing */
@@ -898,4 +932,122 @@ h1 {
 }
 .task-info:hover .task-title {
     color: var(--accent-blue);
+}
+
+/* --- CATEGORY PILLS (Sidebar) --- */
+.category-menu { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+
+.cat-pill {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-gray);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.cat-pill:hover { background: rgba(255,255,255,0.1); color: white; }
+.cat-pill.active {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: white;
+}
+
+/* --- TASK BADGES --- */
+.badge-mini {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    text-transform: uppercase;
+    font-weight: 600;
+    background: rgba(255,255,255,0.1);
+    color: #aaa;
+}
+/* Optional Specific Colors */
+.badge-work { color: #3498db; background: rgba(52, 152, 219, 0.15); }
+.badge-dev { color: #9b59b6; background: rgba(155, 89, 182, 0.15); }
+
+/* =========================================
+   PHASE 2 POLISH: SCROLL & RESPONSIVE TABS
+   ========================================= */
+
+/* 1. Prevent Pills from Squishing */
+.category-menu {
+    flex-wrap: nowrap; /* Force single line */
+    overflow-x: auto;  /* Allow horizontal scroll if needed */
+    padding-bottom: 5px; /* Space for scrollbar if it appears */
+    /* Hide scrollbar for cleaner look */
+    scrollbar-width: none; 
+    -ms-overflow-style: none;
+}
+.category-menu::-webkit-scrollbar { display: none; }
+
+.cat-pill {
+    white-space: nowrap; /* Never break text */
+    flex-shrink: 0;      /* Never shrink the button */
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* 2. Responsive: Icon-Only Mode */
+/* When the screen gets tight (Laptop/Tablet), hide text */
+@media (max-width: 1300px) {
+    .cat-pill span {
+        display: none; /* Hide the text */
+    }
+    .cat-pill {
+        padding: 6px 10px; /* Square-ish shape */
+        font-size: 1.1rem; /* Slightly larger emoji */
+    }
+    /* Keep "All" text visible or replace with icon? 
+       Let's keep "All" text but maybe make it small */
+    .cat-pill:first-child span {
+        display: inline; 
+        font-size: 0.85rem;
+    }
+}
+
+/* 3. Task List Limit (5 Items) */
+/* --- SMOOTH SCROLLING LIST --- */
+#task-list {
+    max-height: 380px;      /* Limit height (approx 5.5 items) */
+    overflow-y: auto;       /* Enable vertical scroll */
+    padding-right: 8px;     /* Space for the scrollbar */
+    
+    /* Smooth Anchor Scrolling */
+    scroll-behavior: smooth;
+}
+
+/* The "MacBook" Floating Scrollbar */
+#task-list::-webkit-scrollbar {
+    width: 10px;            /* Width of the scroll zone */
+}
+
+/* Track (Invisible background) */
+#task-list::-webkit-scrollbar-track {
+    background: transparent; 
+}
+
+/* Thumb (The moving part) */
+#task-list::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1); /* Subtle transparent white */
+    border-radius: 20px;       /* Fully rounded pill shape */
+    border: 3px solid transparent; /* TRICK: Pushes color inside */
+    background-clip: content-box;  /* TRICK: Makes it look 'floating' */
+    transition: background-color 0.3s;
+}
+
+/* Hover State (When you mouse over the list) */
+#task-list:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2); /* Becomes more visible */
+}
+
+/* Active State (When you click/drag it) */
+#task-list::-webkit-scrollbar-thumb:hover {
+    background-color: var(--accent-blue); /* Turns Blue when grabbing! */
 }

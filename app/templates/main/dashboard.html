@@ -90,8 +90,36 @@
         </div>
       </div>
 
+      <div
+        class="category-menu"
+        style="margin-bottom: 20px; justify-content: flex-start"
+      >
+        <button class="cat-pill active" onclick="filterTasks('all', this)">
+          <span>All</span>
+        </button>
+        <button class="cat-pill" onclick="filterTasks('work', this)">
+          💼 <span>Work</span>
+        </button>
+        <button class="cat-pill" onclick="filterTasks('personal', this)">
+          🏠 <span>Personal</span>
+        </button>
+        <button class="cat-pill" onclick="filterTasks('dev', this)">
+          💻 <span>Dev</span>
+        </button>
+        <button class="cat-pill" onclick="filterTasks('health', this)">
+          ❤️ <span>Health</span>
+        </button>
+      </div>
+
       <div class="tasks-card">
         <div class="quick-add-row" id="quick-add-row">
+          <select id="quick-category" class="quick-select">
+            <option value="general">General</option>
+            <option value="work">Work</option>
+            <option value="personal">Personal</option>
+            <option value="dev">Dev</option>
+            <option value="health">Health</option>
+          </select>
           <input
             type="text"
             id="quick-task-input"
@@ -106,6 +134,7 @@
           <div
             class="task-row {% if task.complete %}completed{% endif %}"
             id="task-{{ task.id }}"
+            data-category="{{ task.category or 'general' }}"
           >
             <div
               class="priority-dot"
@@ -114,17 +143,31 @@
 
             <div
               class="task-info"
-              onclick="editTask({{ task.id }}, '{{ task.content }}', '{{ task.priority }}', '{{ task.due_date }}', '{{ task.color }}', '{{ task.recurrence }}')"
+              onclick="editTask(this)"
+              data-id="{{ task.id }}"
+              data-content="{{ task.content }}"
+              data-priority="{{ task.priority }}"
+              data-date="{{ task.due_date }}"
+              data-color="{{ task.color }}"
+              data-recurrence="{{ task.recurrence }}"
+              data-category="{{ task.category or 'general' }}"
             >
-              <span class="task-title">{{ task.content }}</span>
+              <span class="task-title">
+                {{ task.content }} {% if task.category and task.category !=
+                'general' %}
+                <span class="badge-mini badge-{{ task.category }}"
+                  >{{ task.category }}</span
+                >
+                {% endif %}
+              </span>
 
               <span class="task-meta">
                 {{ task.priority|capitalize }} {% if task.due_date %} • {% set
                 days_left = (task.due_date.date() - now.date()).days %} {% if
                 days_left < 0 %}
-                <span style="color: var(--danger-red); font-weight: bold">
-                  {{ days_left|abs }}d overdue
-                </span>
+                <span style="color: var(--danger-red); font-weight: bold"
+                  >{{ days_left|abs }}d overdue</span
+                >
                 {% elif days_left == 0 %}
                 <span style="color: var(--accent-blue); font-weight: bold"
                   >Today</span
@@ -135,6 +178,7 @@
                 {% endif %}
               </span>
             </div>
+
             <div class="task-actions">
               <button
                 class="btn-check-circle"
@@ -160,69 +204,78 @@
       </div>
     </div>
   </div>
-</div>
 
-<div id="task-modal" class="modal-overlay">
-  <div class="modal-box">
-    <h3>Create New Task</h3>
+  <div id="task-modal" class="modal-overlay">
+    <div class="modal-box">
+      <h3>Create New Task</h3>
 
-    <label>Description</label>
-    <input type="text" id="m-content" placeholder="What needs doing?" />
+      <label>Description</label>
+      <input type="text" id="m-content" placeholder="What needs doing?" />
 
-    <label>Priority</label>
-    <select id="m-priority">
-      <option value="normal">Normal</option>
-      <option value="high">High</option>
-      <option value="urgent">Urgent</option>
-    </select>
+      <label>Priority</label>
+      <select id="m-priority">
+        <option value="normal">Normal</option>
+        <option value="high">High</option>
+        <option value="urgent">Urgent</option>
+      </select>
 
-    <label>Due Date</label>
-    <input type="date" id="m-date" />
+      <label>Due Date</label>
+      <input type="date" id="m-date" />
 
-    <label>Recurrence</label>
-    <select id="m-recurrence">
-      <option value="none">One-time</option>
-      <option value="daily">Daily</option>
-      <option value="weekly">Weekly</option>
-    </select>
+      <label>Recurrence</label>
+      <select id="m-recurrence">
+        <option value="none">One-time</option>
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+      </select>
 
-    <label>Color Tag</label>
-    <div class="color-picker-row">
-      <div
-        class="color-dot"
-        style="background: #3b5bdb"
-        onclick="selectColor('#3b5bdb')"
-      ></div>
-      <div
-        class="color-dot"
-        style="background: #e74c3c"
-        onclick="selectColor('#e74c3c')"
-      ></div>
-      <div
-        class="color-dot"
-        style="background: #2ecc71"
-        onclick="selectColor('#2ecc71')"
-      ></div>
-      <div
-        class="color-dot"
-        style="background: #f1c40f"
-        onclick="selectColor('#f1c40f')"
-      ></div>
-      <div
-        class="color-dot"
-        style="background: #9b59b6"
-        onclick="selectColor('#9b59b6')"
-      ></div>
-    </div>
-    <input type="hidden" id="m-color" value="#3b5bdb" />
+      <label>Context</label>
+      <select id="m-category">
+        <option value="general">General</option>
+        <option value="work">💼 Work</option>
+        <option value="personal">🏠 Personal</option>
+        <option value="dev">💻 Dev</option>
+        <option value="health">❤️ Health</option>
+      </select>
 
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-save" onclick="submitTaskForm()">Create Task</button>
+      <label>Color Tag</label>
+      <div class="color-picker-row">
+        <div
+          class="color-dot"
+          style="background: #3b5bdb"
+          onclick="selectColor('#3b5bdb')"
+        ></div>
+        <div
+          class="color-dot"
+          style="background: #e74c3c"
+          onclick="selectColor('#e74c3c')"
+        ></div>
+        <div
+          class="color-dot"
+          style="background: #2ecc71"
+          onclick="selectColor('#2ecc71')"
+        ></div>
+        <div
+          class="color-dot"
+          style="background: #f1c40f"
+          onclick="selectColor('#f1c40f')"
+        ></div>
+        <div
+          class="color-dot"
+          style="background: #9b59b6"
+          onclick="selectColor('#9b59b6')"
+        ></div>
+      </div>
+      <input type="hidden" id="m-color" value="#3b5bdb" />
+
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-save" onclick="submitTaskForm()">Create Task</button>
+      </div>
     </div>
   </div>
+
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
+  {% endblock %}
 </div>
-
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
-
-{% endblock %}
