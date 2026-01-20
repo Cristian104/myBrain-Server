@@ -1,0 +1,87 @@
+{% extends "base.html" %} {% block content %}
+<div class="dashboard-content">
+  <div class="welcome-banner" style="background: #2c3e50">
+    <h1><i class="fas fa-tools"></i> Developer Panel</h1>
+    <p>Internal tools for system testing. Use with caution.</p>
+  </div>
+
+  <div class="panel-right" style="max-width: 800px; margin-top: 20px">
+    <div class="section-header">
+      <h2>Notification Triggers</h2>
+    </div>
+
+    <div class="tasks-card" style="display: flex; gap: 20px; flex-wrap: wrap">
+      <div class="dev-card">
+        <h3>Daily Briefing</h3>
+        <p>
+          Simulates the 8:00 AM triggers (Today, Tomorrow, Overdue, Urgent).
+        </p>
+        <button class="btn-sm" onclick="triggerJob('daily')">
+          Run Daily Logic
+        </button>
+      </div>
+
+      <div class="dev-card">
+        <h3>Weekly Digest</h3>
+        <p>Simulates Sunday 8:00 PM trigger (Next 7 days summary).</p>
+        <button class="btn-sm" onclick="triggerJob('weekly')">
+          Run Weekly Logic
+        </button>
+      </div>
+    </div>
+
+    <div id="dev-console" class="dev-console">Waiting for command...</div>
+  </div>
+</div>
+
+<script>
+  function triggerJob(type) {
+    const consoleDiv = document.getElementById("dev-console");
+    consoleDiv.innerHTML = `<span style="color: yellow;">Processing ${type}...</span>`;
+
+    fetch(`/api/trigger/${type}`, { method: "POST" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          consoleDiv.innerHTML = `<span style="color: #2ecc71;">✔ Success: ${data.message}</span>`;
+        } else {
+          consoleDiv.innerHTML = `<span style="color: #e74c3c;">✘ Error. Check server logs.</span>`;
+        }
+      })
+      .catch((err) => {
+        consoleDiv.innerHTML = `<span style="color: #e74c3c;">✘ Network Error: ${err}</span>`;
+      });
+  }
+</script>
+
+<style>
+  .dev-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    flex: 1;
+    min-width: 250px;
+  }
+  .dev-card h3 {
+    color: var(--accent-blue);
+    margin-bottom: 10px;
+  }
+  .dev-card p {
+    color: #aaa;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    height: 40px;
+  }
+
+  .dev-console {
+    margin-top: 20px;
+    background: #000;
+    color: #0f0;
+    font-family: monospace;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #333;
+  }
+</style>
+{% endblock %}

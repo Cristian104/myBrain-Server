@@ -78,10 +78,29 @@
     <div class="panel-right">
       <div class="section-header">
         <h2><i class="fas fa-tasks"></i> Tasks</h2>
-        <button class="btn-sm" onclick="openModal()">+ New</button>
+        <div class="header-actions" style="display: flex; gap: 10px">
+          <button class="btn-sm" onclick="toggleQuickAdd()">New</button>
+          <button
+            class="btn-sm"
+            style="background: #2ecc71"
+            onclick="openModal()"
+          >
+            New+
+          </button>
+        </div>
       </div>
 
       <div class="tasks-card">
+        <div class="quick-add-row" id="quick-add-row">
+          <input
+            type="text"
+            id="quick-task-input"
+            class="quick-add-input"
+            placeholder="Type and hit Enter..."
+            onkeypress="handleQuickEnter(event)"
+          />
+        </div>
+
         <div id="task-list">
           {% for task in tasks %}
           <div
@@ -93,14 +112,29 @@
               style="background-color: {{ task.color or '#3b5bdb' }}; box-shadow: 0 0 8px {{ task.color or '#3b5bdb' }};"
             ></div>
 
-            <div class="task-info">
+            <div
+              class="task-info"
+              onclick="editTask({{ task.id }}, '{{ task.content }}', '{{ task.priority }}', '{{ task.due_date }}', '{{ task.color }}', '{{ task.recurrence }}')"
+            >
               <span class="task-title">{{ task.content }}</span>
+
               <span class="task-meta">
-                {{ task.priority|capitalize }} {% if task.due_date %} • {{
-                task.due_date.strftime('%Y-%m-%d') }}{% endif %}
+                {{ task.priority|capitalize }} {% if task.due_date %} • {% set
+                days_left = (task.due_date.date() - now.date()).days %} {% if
+                days_left < 0 %}
+                <span style="color: var(--danger-red); font-weight: bold">
+                  {{ days_left|abs }}d overdue
+                </span>
+                {% elif days_left == 0 %}
+                <span style="color: var(--accent-blue); font-weight: bold"
+                  >Today</span
+                >
+                {% elif days_left == 1 %} Tomorrow {% else %} {{ days_left }}d
+                left {% endif %} {% endif %} {% if task.recurrence == 'weekly'
+                %} • <i class="fas fa-sync-alt" title="Repeats Weekly"></i>
+                {% endif %}
               </span>
             </div>
-
             <div class="task-actions">
               <button
                 class="btn-check-circle"
@@ -110,7 +144,11 @@
                 {% if task.complete %}<i class="fas fa-check"></i>{% endif %}
               </button>
 
-              <button class="btn-delete" onclick="deleteTask({{ task.id }})">
+              <button
+                class="btn-delete"
+                id="btn-del-{{ task.id }}"
+                onclick="handleDeleteClick(event, {{ task.id }})"
+              >
                 <i class="fas fa-trash"></i>
               </button>
             </div>
@@ -140,6 +178,13 @@
 
     <label>Due Date</label>
     <input type="date" id="m-date" />
+
+    <label>Recurrence</label>
+    <select id="m-recurrence">
+      <option value="none">One-time</option>
+      <option value="daily">Daily</option>
+      <option value="weekly">Weekly</option>
+    </select>
 
     <label>Color Tag</label>
     <div class="color-picker-row">
@@ -173,7 +218,7 @@
 
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-save" onclick="saveTask()">Create Task</button>
+      <button class="btn-save" onclick="submitTaskForm()">Create Task</button>
     </div>
   </div>
 </div>

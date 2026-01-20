@@ -450,16 +450,43 @@ h1 {
     border-color: var(--success-green);
 }
 
-/* Completed State Styling */
+/* --- COMPLETED STATE (The "Ready to Clear" Look) --- */
+.task-row.completed {
+    opacity: 0.6;                        /* Dim the whole row */
+    background: rgba(255, 255, 255, 0.02); /* Very subtle background */
+    border-left: 3px solid var(--text-gray); /* Gray indicator on the left */
+    transition: all 0.3s ease;
+}
+
+/* 1. Strike through the text */
 .task-row.completed .task-title {
     text-decoration: line-through;
     color: var(--text-gray);
 }
-/* When completed, make the circle solid green */
+
+/* 2. Turn the priority dot gray */
+.task-row.completed .priority-dot {
+    filter: grayscale(100%);             /* Removes the color from the dot */
+    opacity: 0.5;
+}
+
+/* 3. Keep the Check Button Green (Your preferred style) */
 .task-row.completed .btn-check-circle {
     background: var(--success-green);
     border-color: var(--success-green);
-    color: #000; /* Black checkmark on green background */
+    color: #000;
+}
+
+/* 4. Make the Trash Button easier to see on the dimmed background */
+.task-row.completed .btn-delete {
+    color: #888;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+}
+.task-row.completed .btn-delete:hover {
+    color: var(--danger-red);
+    background: rgba(231, 76, 60, 0.2);
+    transform: scale(1.1);
 }
 
 /* Delete Button (Trash) */
@@ -779,3 +806,96 @@ h1 {
     cursor: pointer;
 }
 .btn-save:hover { background: var(--accent-blue-hover); }
+
+/* --- DELETE ANIMATIONS & STATES --- */
+
+/* 1. Delete Pending State (First Click - "Armed") */
+.task-row.delete-pending {
+    opacity: 0.8; /* Slightly dimmed */
+    background: rgba(231, 76, 60, 0.15); /* Stronger red tint */
+    border-radius: 8px; /* Smooth corners */
+    border-left: 3px solid var(--danger-red); /* Red border indicator */
+    transition: all 0.3s ease;
+}
+
+.task-row.delete-pending .btn-delete {
+    color: var(--danger-red);
+    transform: scale(1.15); /* Pop the trash icon */
+    background: rgba(231, 76, 60, 0.2); /* Circle bg for the icon */
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(231, 76, 60, 0.3); /* Subtle glow */
+}
+
+/* 2. Deleting Animation (Swipe then Collapse) */
+/* Optimized "Snappy" Delete Animation */
+@keyframes deleteSwipe {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+        max-height: 60px; /* Tighter height to prevent "dead air" delay */
+        margin-bottom: 0;
+        padding: 15px 0;
+    }
+    30% {
+        /* Start fading/sliding immediately */
+        opacity: 0;
+        transform: translateX(30px);
+        max-height: 60px; 
+        padding: 15px 0;
+    }
+    100% {
+        /* Collapse quickly */
+        opacity: 0;
+        transform: translateX(30px);
+        max-height: 0;
+        padding: 0;
+        margin: 0;
+        border-bottom: none;
+    }
+}
+
+.task-row.deleting {
+    /* Reduced time from 0.5s to 0.3s for snappiness */
+    animation: deleteSwipe 0.3s forwards ease-in-out;
+    
+    /* Hardware acceleration to fix "lag" */
+    will-change: transform, opacity, max-height;
+    
+    overflow: hidden;
+    pointer-events: none;
+}
+
+/* --- QUICK ADD ROW (Hidden by default) --- */
+.quick-add-row {
+    display: none; /* Hidden until "New" is clicked */
+    padding: 15px;
+    background: var(--bg-dark-right);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    gap: 10px;
+    animation: slideDown 0.2s ease-out;
+}
+.quick-add-row.active {
+    display: flex;
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.quick-add-input {
+    flex: 1;
+    background: #1a1d21;
+    border: 1px solid #333;
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: white;
+}
+
+/* Make task title clickable for editing */
+.task-info {
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.task-info:hover .task-title {
+    color: var(--accent-blue);
+}

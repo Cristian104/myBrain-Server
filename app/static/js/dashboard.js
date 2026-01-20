@@ -1,49 +1,122 @@
 /* app/static/js/dashboard.js */
 
-// 1. Stats Logic
-function updateStats() {
-    fetch('/api/stats')
-        .then(res => res.json())
-        .then(data => {
-            if(document.getElementById('cpu-text')) {
-                document.getElementById('cpu-text').innerText = data.cpu + '%';
-                document.getElementById('cpu-bar').style.width = data.cpu + '%';
-                document.getElementById('ram-text').innerText = data.ram + '%';
-                document.getElementById('ram-bar').style.width = data.ram + '%';
-                document.getElementById('disk-text').innerText = data.disk + '%';
-                document.getElementById('disk-bar').style.width = data.disk + '%';
-            }
-        })
-        .catch(console.error);
-}
+// --- GLOBAL VARIABLES ---
+let editingTaskId = null; // Tracks if we are editing or creating
+let deletePendingId = null; // Tracks which task is waiting for 2nd click
 
-// Start stats loop
+// --- 1. STATS (Keep as is) ---
+function updateStats() {
+    fetch('/api/stats').then(res=>res.json()).then(data => {
+        if(document.getElementById('cpu-text')) {
+            document.getElementById('cpu-text').innerText = data.cpu + '%';
+            document.getElementById('cpu-bar').style.width = data.cpu + '%';
+            document.getElementById('ram-text').innerText = data.ram + '%';
+            document.getElementById('ram-bar').style.width = data.ram + '%';
+            document.getElementById('disk-text').innerText = data.disk + '%';
+            document.getElementById('disk-bar').style.width = data.disk + '%';
+        }
+    }).catch(console.error);
+}
 updateStats();
 setInterval(updateStats, 5000);
 
-// 2. Task Modal Logic
-function openModal() { 
-    document.getElementById('task-modal').classList.add('active'); 
+// --- 2. QUICK ADD LOGIC ("New" Button) ---
+function toggleQuickAdd() {
+    const row = document.getElementById('quick-add-row');
+    row.classList.toggle('active');
+    if(row.classList.contains('active')) {
+        document.getElementById('quick-task-input').focus();
+    }
 }
 
-function closeModal() { 
-    document.getElementById('task-modal').classList.remove('active'); 
+function handleQuickEnter(e) {
+    if(e.key === 'Enter') {
+        const content = e.target.value;
+        if(content) {
+            // Send with defaults: normal, blue, no date
+            createTaskAPI(content, 'normal', null, '#3b5bdb');
+            e.target.value = ''; // Clear input
+            toggleQuickAdd(); // Hide row
+        }
+    }
 }
 
-function selectColor(hex) { 
-    document.getElementById('m-color').value = hex; 
-    // Optional: Add visual feedback for selected color here
+// --- 3. MODAL LOGIC ("New+" & Edit) ---
+function openModal(isEdit = false) {
+    const modal = document.getElementById('task-modal');
+    const title = modal.querySelector('h3');
+    const btn = modal.querySelector('.btn-save');
+
+    if (isEdit) {
+        title.innerText = "Edit Task";
+        btn.innerText = "Save Changes";
+    } else {
+        title.innerText = "Create New Task";
+        btn.innerText = "Create Task";
+        // Clear form for new task
+        document.getElementById('m-content').value = '';
+        document.getElementById('m-date').value = '';
+        editingTaskId = null;
+    }
+    modal.classList.add('active');
 }
 
-// 3. Save Task Logic
-function saveTask() {
+function closeModal() { document.getElementById('task-modal').classList.remove('active'); }
+function selectColor(hex) { document.getElementById('m-color').value = hex; }
+
+// Triggered by clicking a task row
+function editTask(id, content, priority, date, color) {
+    editingTaskId = id;
+    
+    document.getElementById('m-content').value = content;
+    document.getElementById('m-priority').value = priority;
+    document.getElementById('m-color').value = color;
+    
+    // Date formatting helper
+    if(date && date !== 'None') {
+        // Python format usually YYYY-MM-DD HH:MM:SS, we need YYYY-MM-DD
+        const cleanDate = date.split(' ')[0]; 
+        document.getElementById('m-date').value = cleanDate;
+    } else {
+        document.getElementById('m-date').value = '';
+    }
+    
+    openModal(true);
+}
+
+// Central Function for Modal Submit
+function submitTaskForm() {
     const content = document.getElementById('m-content').value;
     const priority = document.getElementById('m-priority').value;
     const date = document.getElementById('m-date').value;
     const color = document.getElementById('m-color').value;
+    const recurrence = document.getElementById('m-recurrence').value; // <--- Get value
 
     if(!content) return;
 
+    // ... inside your fetch call body ...
+    const payload = { content, priority, date, color, recurrence }; // <--- Include it
+
+    if (editingTaskId) {
+        fetch(`/api/tasks/${editingTaskId}/edit`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        }).then(res => res.json()).then(data => {
+            if(data.success) location.reload();
+        });
+    } else {
+        fetch('/api/tasks/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        }).then(res => res.json()).then(data => {
+            if(data.success) location.reload();
+        });
+    }
+}
+
+function createTaskAPI(content, priority, date, color) {
     fetch('/api/tasks/add', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -52,56 +125,91 @@ function saveTask() {
     .then(res => res.json())
     .then(data => {
         if(data.success) {
-            const list = document.getElementById('task-list');
-            
-            // HTML for the new task row
-            const html = `
-                <div class="task-row" id="task-${data.id}">
-                    <div class="priority-dot" style="background-color: ${color}; box-shadow: 0 0 8px ${color};"></div>
-                    <div class="task-info">
-                        <span class="task-title">${content}</span>
-                        <span class="task-meta">${priority} ${date ? '• '+date : ''}</span>
-                    </div>
-                    <div class="task-actions">
-                        <button class="btn-check-circle" id="btn-check-${data.id}" onclick="toggleTask(${data.id})"></button>
-                        <button class="btn-delete" onclick="deleteTask(${data.id})"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>`;
-            
-            list.insertAdjacentHTML('afterbegin', html);
-            closeModal();
-            document.getElementById('m-content').value = ''; // Reset input
+            // Inject HTML (Keep your existing HTML injection logic here)
+            // For simplicity in this step, a reload ensures specific IDs are correct
+            location.reload(); 
         }
     });
 }
 
-// 4. Toggle Task Logic
+// --- 4. TWO-STEP DELETE LOGIC ---
+// --- 4. SMART DELETE LOGIC ---
+function handleDeleteClick(event, id) {
+    event.stopPropagation(); // Stop click from triggering "Edit"
+    
+    const row = document.getElementById(`task-${id}`);
+    
+    // CHECK: Is the task already completed?
+    // If YES, or if it's already "armed" (deletePendingId), we delete immediately.
+    const isCompleted = row.classList.contains('completed');
+    const isArmed = (deletePendingId === id);
+
+    if (isCompleted || isArmed) {
+        // EXECUTE DELETE (Animation + API)
+        row.classList.add('deleting'); // Trigger CSS animation swipe
+        
+        setTimeout(() => {
+            fetch(`/api/tasks/${id}/delete`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) row.remove();
+            });
+        }, 500); // 500ms matches CSS
+        
+        deletePendingId = null; // Clear any pending state
+    } else {
+        // ARM DELETE (First Click for Active Tasks)
+        if (deletePendingId) {
+            resetPendingDelete();
+        }
+        
+        deletePendingId = id;
+        row.classList.add('delete-pending');
+        
+        // Add global listener to cancel if clicked elsewhere
+        document.addEventListener('click', handleOutsideClick);
+    }
+}
+
+function resetPendingDelete() {
+    if(!deletePendingId) return;
+    const row = document.getElementById(`task-${deletePendingId}`);
+    if(row) row.classList.remove('delete-pending');
+    deletePendingId = null;
+    document.removeEventListener('click', handleOutsideClick);
+}
+
+function handleOutsideClick(event) {
+    // If click is NOT on the delete button
+    if (!event.target.closest('.btn-delete')) {
+        resetPendingDelete();
+    }
+}
+
+// --- 5. TOGGLE Logic (Keep existing) ---
 function toggleTask(id) {
+    // Don't trigger edit
+    if(event) event.stopPropagation(); 
+    
     fetch(`/api/tasks/${id}/toggle`, { method: 'POST' })
     .then(res => res.json())
     .then(data => {
         const row = document.getElementById(`task-${id}`);
         const btn = document.getElementById(`btn-check-${id}`);
-        
         row.classList.toggle('completed');
-        
-        if(data.new_state) {
-            btn.innerHTML = '<i class="fas fa-check"></i>';
-        } else {
-            btn.innerHTML = '';
-        }
+        btn.innerHTML = data.new_state ? '<i class="fas fa-check"></i>' : '';
     });
 }
 
-// 5. Delete Task Logic
-function deleteTask(id) {
-    if(!confirm('Delete this task?')) return;
-    
-    fetch(`/api/tasks/${id}/delete`, { method: 'DELETE' })
-    .then(res => res.json())
-    .then(data => {
-        if(data.success) {
-            document.getElementById(`task-${id}`).remove();
-        }
-    });
-}
+/* --- CLOSE MODAL ON OUTSIDE CLICK --- */
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('task-modal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            // If the click target is the overlay itself (not the box inside)
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+    }
+});

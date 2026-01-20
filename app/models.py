@@ -32,4 +32,7 @@ class Task(db.Model):
     # Hex color (e.g., #ff0000)
     color = db.Column(db.String(7), default='#3b5bdb')
 
+    # NEW COLUMN: 'none', 'daily', 'weekly'
+    recurrence = db.Column(db.String(10), default='none')
+
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
