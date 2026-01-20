@@ -5,6 +5,138 @@
     <p>System operational. What shall we focus on today?</p>
   </div>
 
+  <div class="stats-container">
+    <div class="stat-card">
+      <div class="ring-container">
+        <svg class="progress-ring" width="80" height="80">
+          <circle
+            class="progress-ring__circle-bg"
+            stroke="rgba(255,255,255,0.1)"
+            stroke-width="6"
+            fill="transparent"
+            r="34"
+            cx="40"
+            cy="40"
+          />
+          <circle
+            class="progress-ring__circle"
+            id="cpu-ring"
+            stroke="#3b82f6"
+            stroke-width="6"
+            fill="transparent"
+            r="34"
+            cx="40"
+            cy="40"
+          />
+        </svg>
+        <div class="icon-center"><i class="ph ph-cpu"></i></div>
+      </div>
+      <div class="stat-info">
+        <h4>CPU</h4>
+        <span id="cpu-text">0%</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="ring-container">
+        <svg class="progress-ring" width="80" height="80">
+          <circle
+            class="progress-ring__circle-bg"
+            stroke="rgba(255,255,255,0.1)"
+            stroke-width="6"
+            fill="transparent"
+            r="34"
+            cx="40"
+            cy="40"
+          />
+          <circle
+            class="progress-ring__circle"
+            id="ram-ring"
+            stroke="#10b981"
+            stroke-width="6"
+            fill="transparent"
+            r="34"
+            cx="40"
+            cy="40"
+          />
+        </svg>
+        <div class="icon-center"><i class="ph ph-memory"></i></div>
+      </div>
+      <div class="stat-info">
+        <h4>RAM</h4>
+        <span id="ram-text">0%</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="ring-container">
+        <svg class="progress-ring" width="80" height="80">
+          <circle
+            class="progress-ring__circle-bg"
+            stroke="rgba(255,255,255,0.1)"
+            stroke-width="6"
+            fill="transparent"
+            r="34"
+            cx="40"
+            cy="40"
+          />
+          <circle
+            class="progress-ring__circle"
+            id="disk-ring"
+            stroke="#f59e0b"
+            stroke-width="6"
+            fill="transparent"
+            r="34"
+            cx="40"
+            cy="40"
+          />
+        </svg>
+        <div class="icon-center"><i class="ph ph-hard-drive"></i></div>
+      </div>
+      <div class="stat-info">
+        <h4>DISK</h4>
+        <span id="disk-text">0%</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function setProgress(id, percent) {
+      const circle = document.getElementById(id);
+      const radius = circle.r.baseVal.value;
+      const circumference = radius * 2 * Math.PI;
+
+      circle.style.strokeDasharray = `${circumference} ${circumference}`;
+
+      // Calculate offset (how much is hidden)
+      const offset = circumference - (percent / 100) * circumference;
+      circle.style.strokeDashoffset = offset;
+    }
+
+    async function fetchStats() {
+      try {
+        const response = await fetch("/api/stats");
+        const data = await response.json();
+
+        // Update Text
+        document.getElementById("cpu-text").innerText = data.cpu + "%";
+        document.getElementById("ram-text").innerText = data.ram + "%";
+        document.getElementById("disk-text").innerText = data.disk + "%";
+
+        // Update Rings
+        setProgress("cpu-ring", data.cpu);
+        setProgress("ram-ring", data.ram);
+        setProgress("disk-ring", data.disk);
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    }
+
+    // Run once immediately, then every 2 seconds
+    fetchStats();
+    setInterval(fetchStats, 2000);
+  </script>
+
   <div class="section-container apps-section">
     <h3><i class="ph ph-grid-nine"></i> Applications</h3>
     <div class="app-grid">
