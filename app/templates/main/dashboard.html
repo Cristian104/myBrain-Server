@@ -7,9 +7,7 @@
 
   <div class="stats-row">
     <div class="stat-card">
-      <div class="stat-icon cpu-color">
-        <i class="fas fa-microchip"></i>
-      </div>
+      <div class="stat-icon cpu-color"><i class="fas fa-microchip"></i></div>
       <div class="stat-details">
         <h3>CPU</h3>
         <h2 id="cpu-text">0%</h2>
@@ -22,11 +20,8 @@
         </div>
       </div>
     </div>
-
     <div class="stat-card">
-      <div class="stat-icon ram-color">
-        <i class="fas fa-memory"></i>
-      </div>
+      <div class="stat-icon ram-color"><i class="fas fa-memory"></i></div>
       <div class="stat-details">
         <h3>RAM</h3>
         <h2 id="ram-text">0%</h2>
@@ -39,11 +34,8 @@
         </div>
       </div>
     </div>
-
     <div class="stat-card">
-      <div class="stat-icon disk-color">
-        <i class="fas fa-hdd"></i>
-      </div>
+      <div class="stat-icon disk-color"><i class="fas fa-hdd"></i></div>
       <div class="stat-details">
         <h3>DISK</h3>
         <h2 id="disk-text">0%</h2>
@@ -80,59 +72,112 @@
           <div class="app-icon"><i class="fas fa-play"></i></div>
           <span>Plex</span>
         </a>
-        <a href="#" class="app-card add-new">
-          <div class="app-icon"><i class="fas fa-plus"></i></div>
-          <span>Add New</span>
-        </a>
       </div>
     </div>
 
     <div class="panel-right">
       <div class="section-header">
-        <h2><i class="fas fa-tasks"></i> Quick Tasks</h2>
+        <h2><i class="fas fa-tasks"></i> Tasks</h2>
+        <button class="btn-sm" onclick="openModal()">+ New</button>
       </div>
+
       <div class="tasks-card">
-        <div class="task-row">
-          <div class="task-status urgent"></div>
-          <div class="task-info">
-            <span class="task-title">System Update</span>
-            <span class="task-meta">Pending - High Priority</span>
-          </div>
-          <button class="btn-check"><i class="fas fa-check"></i></button>
-        </div>
+        <div id="task-list">
+          {% for task in tasks %}
+          <div
+            class="task-row {% if task.complete %}completed{% endif %}"
+            id="task-{{ task.id }}"
+          >
+            <div
+              class="priority-dot"
+              style="background-color: {{ task.color or '#3b5bdb' }}; box-shadow: 0 0 8px {{ task.color or '#3b5bdb' }};"
+            ></div>
 
-        <div class="task-row">
-          <div class="task-status normal"></div>
-          <div class="task-info">
-            <span class="task-title">Check Logs</span>
-            <span class="task-meta">Daily Routine</span>
-          </div>
-          <button class="btn-check"><i class="fas fa-check"></i></button>
-        </div>
+            <div class="task-info">
+              <span class="task-title">{{ task.content }}</span>
+              <span class="task-meta">
+                {{ task.priority|capitalize }} {% if task.due_date %} • {{
+                task.due_date.strftime('%Y-%m-%d') }}{% endif %}
+              </span>
+            </div>
 
-        <a href="#" class="view-all-tasks"
-          >View all tasks <i class="fas fa-arrow-right"></i
-        ></a>
+            <div class="task-actions">
+              <button
+                class="btn-check-circle"
+                id="btn-check-{{ task.id }}"
+                onclick="toggleTask({{ task.id }})"
+              >
+                {% if task.complete %}<i class="fas fa-check"></i>{% endif %}
+              </button>
+
+              <button class="btn-delete" onclick="deleteTask({{ task.id }})">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+          {% else %}
+          <p class="no-tasks">No active tasks.</p>
+          {% endfor %}
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<script>
-  function updateStats() {
-    fetch("/api/stats")
-      .then((res) => res.json())
-      .then((data) => {
-        document.getElementById("cpu-text").innerText = data.cpu + "%";
-        document.getElementById("cpu-bar").style.width = data.cpu + "%";
-        document.getElementById("ram-text").innerText = data.ram + "%";
-        document.getElementById("ram-bar").style.width = data.ram + "%";
-        document.getElementById("disk-text").innerText = data.disk + "%";
-        document.getElementById("disk-bar").style.width = data.disk + "%";
-      })
-      .catch((e) => console.error(e));
-  }
-  setInterval(updateStats, 5000);
-  updateStats();
-</script>
+<div id="task-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Create New Task</h3>
+
+    <label>Description</label>
+    <input type="text" id="m-content" placeholder="What needs doing?" />
+
+    <label>Priority</label>
+    <select id="m-priority">
+      <option value="normal">Normal</option>
+      <option value="high">High</option>
+      <option value="urgent">Urgent</option>
+    </select>
+
+    <label>Due Date</label>
+    <input type="date" id="m-date" />
+
+    <label>Color Tag</label>
+    <div class="color-picker-row">
+      <div
+        class="color-dot"
+        style="background: #3b5bdb"
+        onclick="selectColor('#3b5bdb')"
+      ></div>
+      <div
+        class="color-dot"
+        style="background: #e74c3c"
+        onclick="selectColor('#e74c3c')"
+      ></div>
+      <div
+        class="color-dot"
+        style="background: #2ecc71"
+        onclick="selectColor('#2ecc71')"
+      ></div>
+      <div
+        class="color-dot"
+        style="background: #f1c40f"
+        onclick="selectColor('#f1c40f')"
+      ></div>
+      <div
+        class="color-dot"
+        style="background: #9b59b6"
+        onclick="selectColor('#9b59b6')"
+      ></div>
+    </div>
+    <input type="hidden" id="m-color" value="#3b5bdb" />
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveTask()">Create Task</button>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
 {% endblock %}

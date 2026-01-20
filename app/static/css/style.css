@@ -391,7 +391,7 @@ h1 {
     border-color: var(--accent-blue);
 }
 
-/* Tasks Widget */
+/* --- Updated Tasks Widget Styles --- */
 .tasks-card {
     background: var(--card-surface);
     border-radius: 12px;
@@ -405,41 +405,76 @@ h1 {
     padding: 15px 0;
     border-bottom: 1px solid rgba(255,255,255,0.05);
     gap: 15px;
+    /* Removed border-left here */
 }
 .task-row:last-of-type { border-bottom: none; }
 
-.task-status { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.task-status.urgent { background: var(--danger-red); box-shadow: 0 0 8px var(--danger-red); }
-.task-status.normal { background: var(--accent-blue); }
+/* 1. The Glowing Priority Dot (New) */
+.priority-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    /* Color and glow are set inline in HTML based on db value */
+}
 
+/* Task Info Text */
 .task-info { flex: 1; display: flex; flex-direction: column; }
-.task-title { font-weight: 500; font-size: 0.95rem; color: white; }
+.task-title { font-weight: 500; font-size: 0.95rem; color: white; transition: color 0.2s; }
 .task-meta { font-size: 0.75rem; color: var(--text-gray); margin-top: 2px; }
 
-.btn-check {
+/* 2. Actions Container on the Right */
+.task-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 3. The Circular Check Button (Restored Design) */
+.btn-check-circle {
     background: transparent;
-    border: 1px solid #444;
-    color: #666;
+    border: 2px solid #444; /* Outline circle */
+    color: var(--success-green);
     border-radius: 50%;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s;
+    font-size: 0.8rem;
+    padding: 0;
 }
-.btn-check:hover { background: var(--success-green); border-color: var(--success-green); color: #fff; }
+.btn-check-circle:hover {
+    border-color: var(--success-green);
+}
 
-.view-all-tasks {
-    display: block;
-    text-align: center;
-    margin-top: 20px;
-    font-size: 0.9rem;
-    color: var(--accent-blue);
-    text-decoration: none;
-    font-weight: 500;
+/* Completed State Styling */
+.task-row.completed .task-title {
+    text-decoration: line-through;
+    color: var(--text-gray);
 }
+/* When completed, make the circle solid green */
+.task-row.completed .btn-check-circle {
+    background: var(--success-green);
+    border-color: var(--success-green);
+    color: #000; /* Black checkmark on green background */
+}
+
+/* Delete Button (Trash) */
+.btn-delete {
+    background: transparent;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 5px;
+    transition: color 0.2s;
+}
+.btn-delete:hover { color: var(--danger-red); }
+
+.no-tasks { color: var(--text-gray); font-style: italic; text-align: center; padding: 10px; }
 
 /* =========================================
    MOBILE RESPONSIVENESS
@@ -609,3 +644,138 @@ h1 {
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     }
 }
+
+/* --- BUTTONS & HEADER --- */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 10px;
+}
+
+.btn-sm {
+    background: var(--accent-blue);
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-sm:hover {
+    background: var(--accent-blue-hover);
+}
+
+/* --- MODAL (The Popup System) --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7); /* Dark dimmed background */
+    backdrop-filter: blur(5px);      /* Blur effect behind modal */
+    z-index: 9999;                   /* Sit on top of everything */
+    
+    /* Hidden by default */
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Only show when active */
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-box {
+    background: #1e2227;
+    width: 100%;
+    max-width: 450px;
+    padding: 30px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    animation: modalPop 0.3s ease-out;
+}
+
+@keyframes modalPop {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.modal-box h3 {
+    margin-bottom: 20px;
+    font-size: 1.2rem;
+    color: white;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 10px;
+}
+
+.modal-box label {
+    display: block;
+    color: var(--text-gray);
+    margin: 15px 0 8px;
+    font-size: 0.85rem;
+}
+
+.modal-box input[type="text"], 
+.modal-box input[type="date"], 
+.modal-box select {
+    width: 100%;
+    padding: 12px;
+    background: #121418;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: white;
+    outline: none;
+}
+
+.modal-box input:focus, .modal-box select:focus {
+    border-color: var(--accent-blue);
+}
+
+.color-picker-row {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+}
+.color-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.2s;
+}
+.color-dot:hover { transform: scale(1.1); border-color: white; }
+
+.modal-actions {
+    margin-top: 30px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-cancel {
+    background: transparent;
+    color: var(--text-gray);
+    border: none;
+    padding: 10px 18px;
+    cursor: pointer;
+    font-weight: 500;
+}
+.btn-save {
+    background: var(--accent-blue);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+}
+.btn-save:hover { background: var(--accent-blue-hover); }
