@@ -1051,3 +1051,76 @@ h1 {
 #task-list::-webkit-scrollbar-thumb:hover {
     background-color: var(--accent-blue); /* Turns Blue when grabbing! */
 }
+
+/* --- HABIT TRACKER GRID (Responsive & Clean) --- */
+.habit-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%; /* Fit container */
+    padding: 10px 0;
+    /* No overflow/scroll here to prevent tooltip clipping */
+}
+
+.habit-row {
+    display: grid;
+    /* Fixed label width | Flexible grid for dots */
+    grid-template-columns: 100px 1fr; 
+    align-items: center;
+    gap: 15px;
+}
+
+.habit-label {
+    font-size: 14px;
+    color: #888;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: right;
+}
+
+.habit-grid {
+    display: flex;
+    justify-content: space-between; /* Spread dots evenly */
+    align-items: center;
+    gap: 3px; /* Minimal gap to allow dots to shrink */
+    width: 100%;
+}
+
+.habit-dot {
+    flex: 1; /* Grow/Shrink to fit */
+    aspect-ratio: 1 / 1; /* Keep them circular */
+    border-radius: 50%;
+    background-color: #1A1A1A;
+    min-width: 5px; /* Prevent disappearing on tiny screens */
+    max-width: 18px; /* Prevent becoming huge on large screens */
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.habit-dot:hover {
+    transform: scale(1.4);
+    z-index: 100; /* Ensure it pops over everything */
+    border: 1px solid rgba(255,255,255,0.8);
+}
+
+/* Tooltip Fix */
+.habit-dot:hover::after {
+    content: attr(data-date);
+    position: absolute;
+    bottom: 140%; /* Push higher up */
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: bold;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+    z-index: 101; /* Higher than the dot */
+}

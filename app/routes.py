@@ -1,35 +1,47 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, render_template, redirect, url_for, jsonify, request, flash, current_app
 from flask_login import login_required, current_user, login_user, logout_user
 import psutil
 
 # Local Imports
 from . import db
-from .models import User, Task
+from .models import User, Task, TaskHistory
 from .telegram_bot import send_telegram_message
 from app.scheduler import check_daily_notifications, check_weekly_briefing
 
 # --- BLUEPRINT DEFINITIONS ---
 main = Blueprint('main', __name__)
-auth = Blueprint('auth', __name__)  # <--- This line is now active again!
+auth = Blueprint('auth', __name__)
+api = Blueprint('api', __name__)
 
 # --- MAIN ROUTES ---
 
 
 @main.route('/')
-@main.route('/dashboard')
 @login_required
 def dashboard():
-    tasks = Task.query.filter_by(
-        user_id=current_user.id
-    ).order_by(Task.id.desc()).all()
+    today = datetime.now(timezone.utc).date()
 
-    return render_template(
-        'main/dashboard.html',
-        user=current_user,
-        tasks=tasks,
-        now=datetime.now()
-    )
+    # 1. MIDNIGHT RESET LOGIC
+    recurring_tasks = Task.query.filter(
+        Task.user_id == current_user.id,
+        Task.recurrence != 'none',
+        Task.complete == True
+    ).all()
+
+    for task in recurring_tasks:
+        if task.last_completed and task.last_completed.date() < today:
+            task.complete = False
+            db.session.commit()
+
+    # 2. SMART SORTING
+    tasks = Task.query.filter_by(user_id=current_user.id).order_by(
+        Task.complete.asc(),
+        Task.priority.desc(),
+        Task.due_date.asc()
+    ).all()
+
+    return render_template('main/dashboard.html', tasks=tasks, now=datetime.now())
 
 
 @main.route('/api/stats')
@@ -40,23 +52,20 @@ def server_stats():
     disk = psutil.disk_usage('/').percent
     return jsonify({'cpu': cpu, 'ram': ram, 'disk': disk})
 
-# --- TASK API ROUTES (NEW) ---
 
+# --- TASK API ROUTES ---
 
 @main.route('/api/tasks/add', methods=['POST'])
 @login_required
 def add_task():
     data = request.json
-    # ... existing content/priority/color extraction ...
     content = data.get('content')
     priority = data.get('priority', 'normal')
     color = data.get('color', '#3b5bdb')
-    recurrence = data.get('recurrence', 'none')  # <--- Get it
-
-    # --- NEW: Get Category ---
+    recurrence = data.get('recurrence', 'none')
     category = data.get('category', 'general')
+    is_habit = data.get('is_habit', False)
 
-    # ... date logic ...
     date_str = data.get('date')
     due_date = None
     if date_str:
@@ -70,8 +79,10 @@ def add_task():
             content=content,
             priority=priority,
             color=color,
-            recurrence=recurrence,  # <--- Save it
-            category=category,  # <--- Add this
+            recurrence=recurrence,
+            category=category,
+            is_habit=is_habit,
+            complete=False,  # Explicitly False on creation
             due_date=due_date,
             author=current_user
         )
@@ -85,14 +96,11 @@ def add_task():
 @login_required
 def edit_task(id):
     task = Task.query.get_or_404(id)
-
-    # 1. Security Check
     if task.user_id != current_user.id:
         return jsonify({'success': False}), 403
 
     data = request.json
 
-    # 2. Update Standard Fields
     if 'content' in data:
         task.content = data['content']
     if 'priority' in data:
@@ -101,49 +109,23 @@ def edit_task(id):
         task.color = data['color']
     if 'recurrence' in data:
         task.recurrence = data['recurrence']
-
-    # --- NEW: Update Category ---
     if 'category' in data:
         task.category = data['category']
-    # ----------------------------
+    if 'is_habit' in data:
+        task.is_habit = data['is_habit']
 
-    # 3. Update Date (Cleaned up logic)
     if 'date' in data:
         date_str = data['date']
         if date_str:
             try:
-                # Expecting YYYY-MM-DD
                 task.due_date = datetime.strptime(date_str, '%Y-%m-%d')
             except ValueError:
-                # If date format is wrong, ignore or handle error
                 pass
         else:
-            # If empty string sent, clear the due date
             task.due_date = None
 
-    # 4. Save to DB
     db.session.commit()
     return jsonify({'success': True})
-
-    db.session.commit()
-    return jsonify({'success': True})
-
-    # Handle Date clearing or updating
-    if 'date' in data:
-        date_str = data['date']
-        if date_str:
-            try:
-                task.due_date = datetime.strptime(date_str, '%Y-%m-%d')
-            except ValueError:
-                pass
-        else:
-            task.due_date = None  # Clear date if empty string sent
-
-    db.session.commit()
-    return jsonify({'success': True})
-
-
-# ... imports ...
 
 
 @main.route('/api/tasks/<int:id>/toggle', methods=['POST'])
@@ -151,37 +133,42 @@ def edit_task(id):
 def toggle_task(id):
     task = Task.query.get_or_404(id)
     if task.user_id != current_user.id:
-        return jsonify({'success': False}), 403
+        return jsonify({'error': 'Unauthorized'}), 403
 
-    # Toggle the status
-    task.complete = not task.complete
-    new_state = task.complete
+    today = datetime.now(timezone.utc).date()
 
-    db.session.commit()  # Save the completion of the current task
+    # LOGIC: If currently Done -> We are Unchecking it
+    if task.complete:
+        task.complete = False
+        task.last_completed = None
 
-    # --- RECURRING LOGIC ---
-    # If we just marked it COMPLETE and it has recurrence
-    if new_state and task.recurrence == 'weekly':
-        # Create the next instance
-        next_due = None
-        if task.due_date:
-            next_due = task.due_date + timedelta(days=7)
+        # ✅ REMOVE HISTORY (Fixes "Active by Default" bug)
+        # If I uncheck it today, remove today's dot.
+        history_log = TaskHistory.query.filter_by(
+            task_id=task.id,
+            completed_date=today
+        ).first()
 
-        new_task = Task(
-            content=task.content,
-            priority=task.priority,
-            color=task.color,
-            due_date=next_due,
-            recurrence='weekly',  # Keep the chain going
-            user_id=current_user.id
-        )
-        db.session.add(new_task)
-        db.session.commit()
+        if history_log:
+            db.session.delete(history_log)
 
-        # Optional: Notify user via Telegram that next week's task is queued?
-        # For now, let's keep it silent.
+    # LOGIC: If currently Not Done -> We are Checking it
+    else:
+        task.complete = True
+        task.last_completed = datetime.now(timezone.utc)
 
-    return jsonify({'success': True, 'new_state': new_state})
+        # ✅ ADD HISTORY
+        existing_log = TaskHistory.query.filter_by(
+            task_id=task.id,
+            completed_date=today
+        ).first()
+
+        if not existing_log:
+            log = TaskHistory(task_id=task.id, completed_date=today)
+            db.session.add(log)
+
+    db.session.commit()
+    return jsonify({'success': True, 'new_state': task.complete})
 
 
 @main.route('/api/tasks/<int:id>/delete', methods=['DELETE'])
@@ -189,13 +176,91 @@ def toggle_task(id):
 def delete_task(id):
     task = Task.query.get_or_404(id)
     if task.user_id == current_user.id:
+        # 1. Delete all history logs for this task first
+        TaskHistory.query.filter_by(task_id=id).delete()
+
+        # 2. Delete the task itself
         db.session.delete(task)
         db.session.commit()
         return jsonify({'success': True})
     return jsonify({'success': False}), 403
 
 
-# --- AUTH ROUTES ---
+# --- CHART DATA ROUTE (THE CRITICAL PART) ---
+
+@main.route('/api/stats/charts')
+@login_required
+def get_chart_data():
+    # 1. RADIAL DATA
+    today = datetime.now(timezone.utc).date()
+    start_of_week = today - timedelta(days=today.weekday())
+    categories = ['general', 'work', 'personal', 'dev', 'health']
+    radial_series = []
+
+    for cat in categories:
+        completed_weekly = Task.query.filter(
+            Task.user_id == current_user.id, Task.category == cat,
+            Task.complete == True, Task.last_completed >= start_of_week
+        ).count()
+        pending = Task.query.filter(
+            Task.user_id == current_user.id, Task.category == cat,
+            Task.complete == False
+        ).count()
+        total_weekly = completed_weekly + pending
+
+        percentage = int((completed_weekly / total_weekly)
+                         * 100) if total_weekly > 0 else 0
+        radial_series.append(percentage)
+
+    # 2. HEATMAP DATA (With Color Injection)
+    start_date = today.replace(day=1)
+    next_month = today.replace(day=28) + timedelta(days=4)
+    end_date = next_month - timedelta(days=next_month.day)
+
+    habit_tasks = Task.query.filter_by(
+        user_id=current_user.id, is_habit=True).all()
+    heatmap_series = []
+
+    for task in habit_tasks:
+        history = TaskHistory.query.filter(
+            TaskHistory.task_id == task.id,
+            TaskHistory.completed_date >= start_date,
+            TaskHistory.completed_date <= end_date
+        ).all()
+        completed_dates = {h.completed_date for h in history}
+
+        data_points = []
+        current = start_date
+
+        # ✅ Get the correct color for this task
+        active_color = task.color if task.color else '#2ecc71'
+
+        while current <= end_date:
+            if current in completed_dates:
+                val = 100
+                f_color = active_color  # Done = Task Color
+            else:
+                val = 0
+                f_color = '#1A1A1A'     # Missed = Dark Grey
+
+            date_label = current.strftime("%d")
+            data_points.append({
+                'x': date_label,
+                'y': val,
+                'fillColor': f_color  # ✅ Sends color to frontend
+            })
+            current += timedelta(days=1)
+
+        heatmap_series.append({'name': task.content, 'data': data_points})
+
+    return jsonify({
+        'radial': radial_series,
+        'radial_labels': [c.capitalize() for c in categories],
+        'heatmap': heatmap_series
+    })
+
+# --- AUTH & DEV ROUTES ---
+
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
@@ -218,16 +283,6 @@ def logout():
     return redirect(url_for('auth.login'))
 
 
-@main.route('/api/test-telegram')
-@login_required
-def test_telegram():
-    send_telegram_message(
-        "✅ *System Test*\nYour dashboard connection is active.")
-    return jsonify({'success': True})
-
-# --- DEV PANEL ROUTES ---
-
-
 @main.route('/dev/panel')
 @login_required
 def dev_panel():
@@ -237,19 +292,15 @@ def dev_panel():
 @main.route('/api/trigger/daily', methods=['POST'])
 @login_required
 def trigger_daily():
-    # Force run the daily logic
     check_daily_notifications(current_app._get_current_object())
-    return jsonify({'success': True, 'message': 'Daily notifications sent!'})
+    return jsonify({'success': True})
 
 
 @main.route('/api/trigger/weekly', methods=['POST'])
 @login_required
 def trigger_weekly():
-    # Force run the weekly logic
-    check_weekly_briefing(current_app._get_current_object())  # <--- Updated
-    return jsonify({'success': True, 'message': 'Weekly briefing sent!'})
-
-# app/routes.py
+    check_weekly_briefing(current_app._get_current_object())
+    return jsonify({'success': True})
 
 
 @main.route('/settings')

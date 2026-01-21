@@ -1,7 +1,7 @@
 {% extends "base.html" %} {% block content %}
 <div class="dashboard-content">
   <div class="welcome-banner">
-    <h1>Welcome back, {{ user.username }}</h1>
+    <h1>Welcome back, {{ current_user.username }}</h1>
     <p>System operational. Ready for command.</p>
   </div>
 
@@ -151,6 +151,7 @@
               data-color="{{ task.color }}"
               data-recurrence="{{ task.recurrence }}"
               data-category="{{ task.category or 'general' }}"
+              data-ishabit="{{ 'true' if task.is_habit else 'false' }}"
             >
               <span class="task-title">
                 {{ task.content }} {% if task.category and task.category !=
@@ -173,8 +174,8 @@
                   >Today</span
                 >
                 {% elif days_left == 1 %} Tomorrow {% else %} {{ days_left }}d
-                left {% endif %} {% endif %} {% if task.recurrence == 'weekly'
-                %} • <i class="fas fa-sync-alt" title="Repeats Weekly"></i>
+                left {% endif %} {% endif %} {% if task.recurrence != 'none' %}
+                • <i class="fas fa-sync-alt" title="Repeats"></i>
                 {% endif %}
               </span>
             </div>
@@ -187,7 +188,6 @@
               >
                 {% if task.complete %}<i class="fas fa-check"></i>{% endif %}
               </button>
-
               <button
                 class="btn-delete"
                 id="btn-del-{{ task.id }}"
@@ -202,6 +202,48 @@
           {% endfor %}
         </div>
       </div>
+    </div>
+  </div>
+  <div
+    class="life-stats-container"
+    style="
+      margin-top: 40px;
+      margin-bottom: 50px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    "
+  >
+    <div
+      class="card-glass"
+      style="
+        flex: 1;
+        min-width: 300px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      "
+    >
+      <h4 style="margin-bottom: 15px; color: var(--text-gray); width: 100%">
+        Weekly Focus
+      </h4>
+      <div id="radial-chart" style="width: 100%; min-height: 280px"></div>
+    </div>
+
+    <div class="card-glass" style="flex: 2; min-width: 450px; padding: 20px">
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 15px;
+        "
+      >
+        <h4 style="color: var(--text-gray)">Habit Consistency (30 Days)</h4>
+        <span class="badge-mini badge-health">Health & Meds</span>
+      </div>
+      <div id="habit-heatmap" style="width: 100%; min-height: 280px"></div>
     </div>
   </div>
 
@@ -238,6 +280,28 @@
         <option value="health">❤️ Health</option>
       </select>
 
+      <div
+        class="form-group"
+        style="margin: 15px 0; display: flex; align-items: center; gap: 10px"
+      >
+        <input
+          type="checkbox"
+          id="m-is-habit"
+          style="width: auto; margin: 0; cursor: pointer"
+        />
+        <label
+          for="m-is-habit"
+          style="
+            margin: 0;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-gray);
+          "
+        >
+          📈 Track as Daily Habit (Show in Charts)
+        </label>
+      </div>
+
       <label>Color Tag</label>
       <div class="color-picker-row">
         <div
@@ -270,12 +334,10 @@
 
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-        <button class="btn-save" onclick="submitTaskForm()">Create Task</button>
+        <button class="btn-save" onclick="submitTaskForm()">Save Task</button>
       </div>
     </div>
   </div>
-
-  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 
   {% endblock %}
 </div>

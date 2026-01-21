@@ -1,10 +1,15 @@
 /* app/static/js/dashboard.js */
 
 // --- GLOBAL VARIABLES ---
-let editingTaskId = null; // Tracks if we are editing or creating
-let deletePendingId = null; // Tracks which task is waiting for 2nd click
+let editingTaskId = null; 
+let deletePendingId = null;
 
-// --- 1. STATS (Keep as is) ---
+// Store chart instances globally so we can destroy them later
+let radialChartInstance = null;
+let habitChartInstance = null;
+
+
+// --- 1. STATS ---
 function updateStats() {
     fetch('/api/stats').then(res=>res.json()).then(data => {
         if(document.getElementById('cpu-text')) {
@@ -20,7 +25,7 @@ function updateStats() {
 updateStats();
 setInterval(updateStats, 5000);
 
-// --- 2. QUICK ADD LOGIC ("New" Button) ---
+// --- 2. QUICK ADD LOGIC ---
 function toggleQuickAdd() {
     const row = document.getElementById('quick-add-row');
     row.classList.toggle('active');
@@ -32,21 +37,18 @@ function toggleQuickAdd() {
 function handleQuickEnter(e) {
     if(e.key === 'Enter') {
         const content = e.target.value;
-        // NEW: Get the category from the dropdown next to the input
         const categorySelect = document.getElementById('quick-category');
         const category = categorySelect ? categorySelect.value : 'general';
 
         if(content) {
-            // Send with defaults: normal, blue, no date + Selected Category
             createTaskAPI(content, 'normal', null, '#3b5bdb', category);
-            
-            e.target.value = ''; // Clear input
-            toggleQuickAdd(); // Hide row
+            e.target.value = '';
+            toggleQuickAdd();
         }
     }
 }
 
-// --- 3. MODAL LOGIC ("New+" & Edit) ---
+// --- 3. MODAL LOGIC ---
 function openModal(isEdit = false) {
     const modal = document.getElementById('task-modal');
     const title = modal.querySelector('h3');
@@ -58,10 +60,10 @@ function openModal(isEdit = false) {
     } else {
         title.innerText = "Create New Task";
         btn.innerText = "Create Task";
-        // Clear form for new task
         document.getElementById('m-content').value = '';
         document.getElementById('m-date').value = '';
-        document.getElementById('m-category').value = 'general'; // Default
+        document.getElementById('m-category').value = 'general';
+        document.getElementById('m-is-habit').checked = false; 
         editingTaskId = null;
     }
     modal.classList.add('active');
@@ -70,20 +72,20 @@ function openModal(isEdit = false) {
 function closeModal() { document.getElementById('task-modal').classList.remove('active'); }
 function selectColor(hex) { document.getElementById('m-color').value = hex; }
 
-// Triggered by clicking a task row (Updated to use Data Attributes)
 function editTask(element) {
-    // Read from the clicked element's data attributes
     editingTaskId = element.getAttribute('data-id');
     
     document.getElementById('m-content').value = element.getAttribute('data-content');
     document.getElementById('m-priority').value = element.getAttribute('data-priority');
     document.getElementById('m-color').value = element.getAttribute('data-color');
     document.getElementById('m-recurrence').value = element.getAttribute('data-recurrence');
-    document.getElementById('m-category').value = element.getAttribute('data-category'); // NEW
+    document.getElementById('m-category').value = element.getAttribute('data-category');
+
+    const isHabit = element.getAttribute('data-ishabit') === 'true';
+    document.getElementById('m-is-habit').checked = isHabit;
 
     const dateVal = element.getAttribute('data-date');
     if(dateVal && dateVal !== 'None') {
-        // Python format usually YYYY-MM-DD HH:MM:SS, we need YYYY-MM-DD
         const cleanDate = dateVal.split(' ')[0]; 
         document.getElementById('m-date').value = cleanDate;
     } else {
@@ -93,39 +95,29 @@ function editTask(element) {
     openModal(true);
 }
 
-// Central Function for Modal Submit
 function submitTaskForm() {
     const content = document.getElementById('m-content').value;
     const priority = document.getElementById('m-priority').value;
     const date = document.getElementById('m-date').value;
     const color = document.getElementById('m-color').value;
     const recurrence = document.getElementById('m-recurrence').value;
-    const category = document.getElementById('m-category').value; // NEW
+    const category = document.getElementById('m-category').value;
+    const is_habit = document.getElementById('m-is-habit').checked;
 
     if(!content) return;
 
-    const payload = { content, priority, date, color, recurrence, category };
-
-    if (editingTaskId) {
-        fetch(`/api/tasks/${editingTaskId}/edit`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        }).then(res => res.json()).then(data => {
-            if(data.success) location.reload();
-        });
-    } else {
-        fetch('/api/tasks/add', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        }).then(res => res.json()).then(data => {
-            if(data.success) location.reload();
-        });
-    }
+    const payload = { content, priority, date, color, recurrence, category, is_habit };
+    const url = editingTaskId ? `/api/tasks/${editingTaskId}/edit` : '/api/tasks/add';
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+    }).then(res => res.json()).then(data => {
+        if(data.success) location.reload();
+    });
 }
 
-// API Helper for Quick Add
 function createTaskAPI(content, priority, date, color, category = 'general') {
     fetch('/api/tasks/add', {
         method: 'POST',
@@ -134,19 +126,15 @@ function createTaskAPI(content, priority, date, color, category = 'general') {
     })
     .then(res => res.json())
     .then(data => {
-        if(data.success) {
-            location.reload(); 
-        }
+        if(data.success) location.reload(); 
     });
 }
 
-// --- 4. CATEGORY FILTERING (NEW) ---
+// --- 4. CATEGORY FILTERING ---
 function filterTasks(category, btnElement) {
-    // 1. Visual update for buttons
     document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
     btnElement.classList.add('active');
 
-    // 2. Filter Rows
     const rows = document.querySelectorAll('.task-row');
     rows.forEach(row => {
         const rowCat = row.getAttribute('data-category');
@@ -160,38 +148,36 @@ function filterTasks(category, btnElement) {
 
 // --- 5. SMART DELETE LOGIC ---
 function handleDeleteClick(event, id) {
-    event.stopPropagation(); // Stop click from triggering "Edit"
+    event.stopPropagation();
     
     const row = document.getElementById(`task-${id}`);
+    const isHabit = row.querySelector('.task-info').getAttribute('data-ishabit') === 'true';
     
-    // CHECK: Is the task already completed?
-    // If YES, or if it's already "armed" (deletePendingId), we delete immediately.
+    if (isHabit) {
+        const confirmed = confirm("⚠️ Warning: This task is part of your Habit Tracker.\nDeleting it will remove all history from the charts.\n\nAre you sure?");
+        if (!confirmed) return;
+    }
+
     const isCompleted = row.classList.contains('completed');
     const isArmed = (deletePendingId === id);
 
-    if (isCompleted || isArmed) {
-        // EXECUTE DELETE (Animation + API)
-        row.classList.add('deleting'); // Trigger CSS animation swipe
-        
+    if (isCompleted || isArmed || isHabit) {
+        row.classList.add('deleting');
         setTimeout(() => {
             fetch(`/api/tasks/${id}/delete`, { method: 'DELETE' })
             .then(res => res.json())
             .then(data => {
-                if(data.success) row.remove();
+                if(data.success) {
+                    row.remove();
+                    loadCharts(); // Refresh charts
+                }
             });
-        }, 300); // 300ms matches CSS
-        
-        deletePendingId = null; // Clear any pending state
+        }, 300);
+        deletePendingId = null;
     } else {
-        // ARM DELETE (First Click for Active Tasks)
-        if (deletePendingId) {
-            resetPendingDelete();
-        }
-        
+        if (deletePendingId) resetPendingDelete();
         deletePendingId = id;
         row.classList.add('delete-pending');
-        
-        // Add global listener to cancel if clicked elsewhere
         document.addEventListener('click', handleOutsideClick);
     }
 }
@@ -205,15 +191,13 @@ function resetPendingDelete() {
 }
 
 function handleOutsideClick(event) {
-    // If click is NOT on the delete button
     if (!event.target.closest('.btn-delete')) {
         resetPendingDelete();
     }
 }
 
-// --- 6. TOGGLE Logic ---
+// --- 6. TOGGLE LOGIC ---
 function toggleTask(id) {
-    // Don't trigger edit
     if(event) event.stopPropagation(); 
     
     fetch(`/api/tasks/${id}/toggle`, { method: 'POST' })
@@ -221,20 +205,120 @@ function toggleTask(id) {
     .then(data => {
         const row = document.getElementById(`task-${id}`);
         const btn = document.getElementById(`btn-check-${id}`);
-        row.classList.toggle('completed');
-        btn.innerHTML = data.new_state ? '<i class="fas fa-check"></i>' : '';
+        const taskList = document.getElementById('task-list');
+
+        if (data.new_state) {
+            row.classList.add('completed');
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+            taskList.appendChild(row); 
+        } else {
+            row.classList.remove('completed');
+            btn.innerHTML = '';
+            taskList.prepend(row); 
+        }
+        
+        loadCharts(); // Refresh charts
     });
 }
 
-/* --- CLOSE MODAL ON OUTSIDE CLICK --- */
+// --- 7. CHARTS LOGIC (Responsive Grid Fix) ---
+function loadCharts() {
+    fetch('/api/stats/charts')
+    .then(res => res.json())
+    .then(data => {
+        
+        // --- A. RADIAL CHART (ApexCharts) ---
+        const radialContainer = document.querySelector("#radial-chart");
+        if(radialContainer) {
+            if(radialChartInstance) radialChartInstance.destroy();
+            var radialOptions = {
+                series: data.radial,
+                chart: { height: 280, type: 'radialBar', fontFamily: 'Inter', background: 'transparent' },
+                plotOptions: {
+                    radialBar: {
+                        dataLabels: {
+                            total: { show: true, label: 'Focus', color: '#fff', formatter: (w) => Math.round(w.globals.seriesTotals.reduce((a, b) => a + b, 0) / 5) + "%" }
+                        },
+                        track: { background: '#222' }
+                    }
+                },
+                labels: data.radial_labels,
+                colors: ['#9b59b6', '#f1c40f', '#e74c3c', '#3b5bdb', '#2ecc71'], 
+                theme: { mode: 'dark' }
+            };
+            radialChartInstance = new ApexCharts(radialContainer, radialOptions);
+            radialChartInstance.render();
+        }
+
+        // --- B. HABIT GRID (Responsive HTML Builder) ---
+        const gridContainer = document.getElementById('habit-heatmap');
+        if (gridContainer) {
+            gridContainer.innerHTML = ''; 
+
+            if (!data.heatmap || data.heatmap.length === 0) {
+                gridContainer.innerHTML = '<p style="color:#555; text-align:center; padding-top:40px;">No habits tracked yet.</p>';
+                return;
+            }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'habit-container';
+
+            data.heatmap.forEach(habit => {
+                const row = document.createElement('div');
+                row.className = 'habit-row';
+
+                // Label
+                const label = document.createElement('div');
+                label.className = 'habit-label';
+                label.innerText = habit.name;
+                row.appendChild(label);
+
+                // Dots Container
+                const dots = document.createElement('div');
+                dots.className = 'habit-grid';
+
+                habit.data.forEach(point => {
+                    const dot = document.createElement('div');
+                    dot.className = 'habit-dot';
+                    
+                    // ✅ SAFETY CHECK: Only apply color if explicitly DONE (100)
+                    // This fixes the "Active by default" bug if the backend sends loose data
+                    const isDone = (point.y === 100);
+
+                    if (isDone && point.fillColor && point.fillColor !== '#1A1A1A') {
+                        dot.style.backgroundColor = point.fillColor;
+                        dot.style.boxShadow = `0 0 6px ${point.fillColor}`; 
+                    } else {
+                        // Force empty state
+                        dot.style.backgroundColor = '#1A1A1A';
+                        dot.style.boxShadow = 'none';
+                    }
+                    
+                    // Tooltip
+                    const status = isDone ? "Completed" : "Missed";
+                    dot.setAttribute('data-date', `${point.x}: ${status}`);
+                    
+                    dots.appendChild(dot);
+                });
+
+                row.appendChild(dots);
+                wrapper.appendChild(row);
+            });
+
+            gridContainer.appendChild(wrapper);
+        }
+    })
+    .catch(console.error);
+}
+
+// --- INIT LISTENERS ---
 document.addEventListener('DOMContentLoaded', () => {
+    loadCharts();
+    
     const modal = document.getElementById('task-modal');
     if (modal) {
         modal.addEventListener('click', (e) => {
-            // If the click target is the overlay itself (not the box inside)
-            if (e.target === modal) {
-                closeModal();
-            }
+            if (e.target === modal) closeModal();
         });
     }
 });
