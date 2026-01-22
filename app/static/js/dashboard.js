@@ -3,11 +3,7 @@
 // --- GLOBAL VARIABLES ---
 let editingTaskId = null; 
 let deletePendingId = null;
-
-// Store chart instances globally so we can destroy them later
 let radialChartInstance = null;
-let habitChartInstance = null;
-
 
 // --- 1. STATS ---
 function updateStats() {
@@ -25,13 +21,10 @@ function updateStats() {
 updateStats();
 setInterval(updateStats, 5000);
 
-// --- 2. QUICK ADD LOGIC ---
+// --- 2. QUICK ADD & MODAL ---
 function toggleQuickAdd() {
-    const row = document.getElementById('quick-add-row');
-    row.classList.toggle('active');
-    if(row.classList.contains('active')) {
-        document.getElementById('quick-task-input').focus();
-    }
+    document.getElementById('quick-add-row').classList.toggle('active');
+    document.getElementById('quick-task-input').focus();
 }
 
 function handleQuickEnter(e) {
@@ -39,17 +32,14 @@ function handleQuickEnter(e) {
         const content = e.target.value;
         const categorySelect = document.getElementById('quick-category');
         const category = categorySelect ? categorySelect.value : 'general';
-
         if(content) {
             createTaskAPI(content, 'normal', null, '#3b5bdb', category);
             e.target.value = '';
-            toggleQuickAdd();
         }
     }
 }
 
-// --- 3. MODAL LOGIC ---
-function openModal(isEdit = false) {
+function openModal(isEdit=false) {
     const modal = document.getElementById('task-modal');
     const title = modal.querySelector('h3');
     const btn = modal.querySelector('.btn-save');
@@ -68,30 +58,20 @@ function openModal(isEdit = false) {
     }
     modal.classList.add('active');
 }
-
 function closeModal() { document.getElementById('task-modal').classList.remove('active'); }
 function selectColor(hex) { document.getElementById('m-color').value = hex; }
 
 function editTask(element) {
     editingTaskId = element.getAttribute('data-id');
-    
     document.getElementById('m-content').value = element.getAttribute('data-content');
     document.getElementById('m-priority').value = element.getAttribute('data-priority');
     document.getElementById('m-color').value = element.getAttribute('data-color');
     document.getElementById('m-recurrence').value = element.getAttribute('data-recurrence');
     document.getElementById('m-category').value = element.getAttribute('data-category');
-
-    const isHabit = element.getAttribute('data-ishabit') === 'true';
-    document.getElementById('m-is-habit').checked = isHabit;
-
+    document.getElementById('m-is-habit').checked = element.getAttribute('data-ishabit') === 'true';
     const dateVal = element.getAttribute('data-date');
-    if(dateVal && dateVal !== 'None') {
-        const cleanDate = dateVal.split(' ')[0]; 
-        document.getElementById('m-date').value = cleanDate;
-    } else {
-        document.getElementById('m-date').value = '';
-    }
-    
+    if(dateVal && dateVal !== 'None') { document.getElementById('m-date').value = dateVal.split(' ')[0]; } 
+    else { document.getElementById('m-date').value = ''; }
     openModal(true);
 }
 
@@ -103,19 +83,11 @@ function submitTaskForm() {
     const recurrence = document.getElementById('m-recurrence').value;
     const category = document.getElementById('m-category').value;
     const is_habit = document.getElementById('m-is-habit').checked;
-
     if(!content) return;
-
     const payload = { content, priority, date, color, recurrence, category, is_habit };
     const url = editingTaskId ? `/api/tasks/${editingTaskId}/edit` : '/api/tasks/add';
-    
-    fetch(url, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
-    }).then(res => res.json()).then(data => {
-        if(data.success) location.reload();
-    });
+    fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) })
+    .then(res => res.json()).then(data => { if(data.success) location.reload(); });
 }
 
 function createTaskAPI(content, priority, date, color, category = 'general') {
@@ -123,111 +95,96 @@ function createTaskAPI(content, priority, date, color, category = 'general') {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ content, priority, date, color, category })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if(data.success) location.reload(); 
-    });
+    }).then(res => res.json()).then(data => { if(data.success) location.reload(); });
 }
 
-// --- 4. CATEGORY FILTERING ---
+// --- 3. FILTERING LOGIC ---
 function filterTasks(category, btnElement) {
     document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
     btnElement.classList.add('active');
+    const quickSelect = document.getElementById('quick-category');
+    if (quickSelect) quickSelect.value = (category === 'all') ? 'general' : category;
 
     const rows = document.querySelectorAll('.task-row');
     rows.forEach(row => {
         const rowCat = row.getAttribute('data-category');
-        if (category === 'all' || rowCat === category) {
-            row.style.display = 'flex';
+        const isCompleted = row.classList.contains('completed');
+        let shouldShow = false;
+
+        if (category === 'all') {
+            if (!isCompleted) shouldShow = true;
+            else if (rowCat === 'general' || rowCat === 'None' || !rowCat) shouldShow = true;
         } else {
-            row.style.display = 'none';
+            shouldShow = (rowCat === category);
         }
+        row.style.display = shouldShow ? 'flex' : 'none';
     });
 }
 
-// --- 5. SMART DELETE LOGIC ---
 function handleDeleteClick(event, id) {
     event.stopPropagation();
-    
     const row = document.getElementById(`task-${id}`);
     const isHabit = row.querySelector('.task-info').getAttribute('data-ishabit') === 'true';
+    if (isHabit && !confirm("⚠️ Warning: Deleting a habit removes its history. Continue?")) return;
     
-    if (isHabit) {
-        const confirmed = confirm("⚠️ Warning: This task is part of your Habit Tracker.\nDeleting it will remove all history from the charts.\n\nAre you sure?");
-        if (!confirmed) return;
-    }
-
-    const isCompleted = row.classList.contains('completed');
-    const isArmed = (deletePendingId === id);
-
-    if (isCompleted || isArmed || isHabit) {
-        row.classList.add('deleting');
-        setTimeout(() => {
-            fetch(`/api/tasks/${id}/delete`, { method: 'DELETE' })
-            .then(res => res.json())
-            .then(data => {
-                if(data.success) {
-                    row.remove();
-                    loadCharts(); // Refresh charts
-                }
-            });
-        }, 300);
-        deletePendingId = null;
-    } else {
-        if (deletePendingId) resetPendingDelete();
-        deletePendingId = id;
-        row.classList.add('delete-pending');
-        document.addEventListener('click', handleOutsideClick);
-    }
+    row.classList.add('deleting');
+    setTimeout(() => {
+        fetch(`/api/tasks/${id}/delete`, { method: 'DELETE' }).then(res => res.json()).then(data => { if(data.success) { row.remove(); loadCharts(); } });
+    }, 300);
 }
 
-function resetPendingDelete() {
-    if(!deletePendingId) return;
-    const row = document.getElementById(`task-${deletePendingId}`);
-    if(row) row.classList.remove('delete-pending');
-    deletePendingId = null;
-    document.removeEventListener('click', handleOutsideClick);
-}
-
-function handleOutsideClick(event) {
-    if (!event.target.closest('.btn-delete')) {
-        resetPendingDelete();
-    }
-}
-
-// --- 6. TOGGLE LOGIC ---
 function toggleTask(id) {
     if(event) event.stopPropagation(); 
-    
-    fetch(`/api/tasks/${id}/toggle`, { method: 'POST' })
-    .then(res => res.json())
-    .then(data => {
+    fetch(`/api/tasks/${id}/toggle`, { method: 'POST' }).then(res => res.json()).then(data => {
         const row = document.getElementById(`task-${id}`);
         const btn = document.getElementById(`btn-check-${id}`);
         const taskList = document.getElementById('task-list');
-
+        
         if (data.new_state) {
             row.classList.add('completed');
             btn.innerHTML = '<i class="fas fa-check"></i>';
             taskList.appendChild(row); 
+            
+            const activeCat = document.querySelector('.cat-pill.active').innerText.trim().toLowerCase();
+            const rowCat = row.getAttribute('data-category');
+            if(activeCat === 'all' && rowCat !== 'general') row.style.display = 'none';
         } else {
             row.classList.remove('completed');
             btn.innerHTML = '';
-            taskList.prepend(row); 
+            taskList.prepend(row);
+            row.style.display = 'flex'; 
         }
-        
-        loadCharts(); // Refresh charts
+
+        // ✅ UPDATE DATE LABEL INSTANTLY
+        if (data.new_date_label) {
+            const metaSpan = row.querySelector('.task-meta');
+            if (metaSpan) {
+                const prio = data.priority.charAt(0).toUpperCase() + data.priority.slice(1);
+                let html = `${prio} • `;
+                
+                if (data.new_date_label.includes('overdue')) {
+                    html += `<span style="color: var(--danger-red); font-weight: bold">${data.new_date_label}</span>`;
+                } else if (data.new_date_label === 'Today') {
+                    html += `<span style="color: var(--accent-blue); font-weight: bold">Today</span>`;
+                } else {
+                    html += data.new_date_label;
+                }
+                
+                // Assuming it's recurring if we are updating the date
+                html += ` • <i class="fas fa-sync-alt" title="Repeats"></i>`;
+                metaSpan.innerHTML = html;
+            }
+        }
+
+        loadCharts();
     });
 }
 
-// --- 7. CHARTS LOGIC (Responsive Grid Fix) ---
+// --- 4. GRAPH INTERACTION ---
 function loadCharts() {
     fetch('/api/stats/charts')
     .then(res => res.json())
     .then(data => {
-        
-        // --- A. RADIAL CHART (ApexCharts) ---
         const radialContainer = document.querySelector("#radial-chart");
         if(radialContainer) {
             if(radialChartInstance) radialChartInstance.destroy();
@@ -250,11 +207,9 @@ function loadCharts() {
             radialChartInstance.render();
         }
 
-        // --- B. HABIT GRID (Responsive HTML Builder) ---
         const gridContainer = document.getElementById('habit-heatmap');
         if (gridContainer) {
             gridContainer.innerHTML = ''; 
-
             if (!data.heatmap || data.heatmap.length === 0) {
                 gridContainer.innerHTML = '<p style="color:#555; text-align:center; padding-top:40px;">No habits tracked yet.</p>';
                 return;
@@ -266,59 +221,94 @@ function loadCharts() {
             data.heatmap.forEach(habit => {
                 const row = document.createElement('div');
                 row.className = 'habit-row';
-
-                // Label
+                
                 const label = document.createElement('div');
                 label.className = 'habit-label';
                 label.innerText = habit.name;
                 row.appendChild(label);
 
-                // Dots Container
                 const dots = document.createElement('div');
                 dots.className = 'habit-grid';
 
                 habit.data.forEach(point => {
                     const dot = document.createElement('div');
                     dot.className = 'habit-dot';
-                    
-                    // ✅ SAFETY CHECK: Only apply color if explicitly DONE (100)
-                    // This fixes the "Active by default" bug if the backend sends loose data
                     const isDone = (point.y === 100);
 
-                    if (isDone && point.fillColor && point.fillColor !== '#1A1A1A') {
+                    if (isDone) {
                         dot.style.backgroundColor = point.fillColor;
-                        dot.style.boxShadow = `0 0 6px ${point.fillColor}`; 
+                        dot.style.boxShadow = `0 0 6px ${point.fillColor}`;
+                        dot.setAttribute('data-date', `${point.x}: Completed`);
                     } else {
-                        // Force empty state
                         dot.style.backgroundColor = '#1A1A1A';
-                        dot.style.boxShadow = 'none';
+                        dot.setAttribute('data-date', `${point.x}: Missed`);
+                        
+                        // ✅ FIX: PASSING THE REAL COLOR (habit.color), NOT THE EMPTY COLOR (point.fillColor)
+                        dot.onclick = function() {
+                           handleDotClick(dot, habit.id, point.real_date, habit.color); 
+                        };
                     }
-                    
-                    // Tooltip
-                    const status = isDone ? "Completed" : "Missed";
-                    dot.setAttribute('data-date', `${point.x}: ${status}`);
-                    
                     dots.appendChild(dot);
                 });
-
                 row.appendChild(dots);
                 wrapper.appendChild(row);
             });
-
             gridContainer.appendChild(wrapper);
         }
     })
     .catch(console.error);
 }
 
-// --- INIT LISTENERS ---
-document.addEventListener('DOMContentLoaded', () => {
-    loadCharts();
-    
-    const modal = document.getElementById('task-modal');
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
+// --- 5. DOT CLICK HANDLER ---
+let clickTimers = {};
+
+function handleDotClick(dotElement, taskId, dateStr, taskColor) {
+    if (!dotElement.classList.contains('confirming')) {
+        // CLICK 1: DIM COLOR
+        dotElement.classList.add('confirming');
+        dotElement.style.backgroundColor = taskColor; 
+        dotElement.style.opacity = '0.4'; 
+        
+        dotElement.dataset.timer = setTimeout(() => {
+            dotElement.classList.remove('confirming');
+            dotElement.style.backgroundColor = '#1A1A1A';
+            dotElement.style.opacity = '1';
+        }, 3000);
+        
+    } else {
+        // CLICK 2: CONFIRM
+        clearTimeout(dotElement.dataset.timer);
+        dotElement.classList.remove('confirming');
+        
+        // Paint it solid instantly
+        dotElement.style.opacity = '1';
+        dotElement.style.boxShadow = `0 0 8px ${taskColor}`;
+        dotElement.style.backgroundColor = taskColor;
+        
+        // Update Text
+        const currentLabel = dotElement.getAttribute('data-date').split(':')[0];
+        dotElement.setAttribute('data-date', `${currentLabel}: Completed`);
+        
+        // Lock interaction
+        dotElement.onclick = null;
+        dotElement.style.cursor = 'default';
+        
+        fetch(`/api/tasks/${taskId}/history/add`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ date: dateStr })
+        }).then(res => res.json()).then(data => {
+            if(!data.success) {
+                alert("Error saving habit");
+                dotElement.style.backgroundColor = '#1A1A1A'; 
+            }
         });
     }
+}
+
+// --- INIT ---
+document.addEventListener('DOMContentLoaded', () => {
+    loadCharts();
+    const modal = document.getElementById('task-modal');
+    if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 });

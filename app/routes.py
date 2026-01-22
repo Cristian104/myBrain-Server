@@ -34,14 +34,53 @@ def dashboard():
             task.complete = False
             db.session.commit()
 
-    # 2. SMART SORTING
-    tasks = Task.query.filter_by(user_id=current_user.id).order_by(
+    # 2. SMART QUERY
+    tasks = Task.query.filter(
+        Task.user_id == current_user.id,
+        db.or_(
+            Task.complete == False,
+            db.and_(Task.complete == True, db.func.date(
+                Task.last_completed) == today)
+        )
+    ).order_by(
         Task.complete.asc(),
-        Task.priority.desc(),
-        Task.due_date.asc()
+        Task.due_date.asc(),
+        Task.priority.desc()
     ).all()
 
     return render_template('main/dashboard.html', tasks=tasks, now=datetime.now())
+
+# --- NEW ROUTE FOR HABIT BACKFILLING ---
+
+
+@main.route('/api/tasks/<int:id>/history/add', methods=['POST'])
+@login_required
+def add_task_history(id):
+    task = Task.query.get_or_404(id)
+    if task.user_id != current_user.id:
+        return jsonify({'success': False}), 403
+
+    data = request.json
+    date_str = data.get('date')
+
+    if not date_str:
+        return jsonify({'success': False}), 400
+
+    try:
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        exists = TaskHistory.query.filter_by(
+            task_id=task.id, completed_date=target_date).first()
+
+        if not exists:
+            log = TaskHistory(task_id=task.id, completed_date=target_date)
+            db.session.add(log)
+            db.session.commit()
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': True, 'message': 'Already marked'})
+
+    except ValueError:
+        return jsonify({'success': False}), 400
 
 
 @main.route('/api/stats')
@@ -52,8 +91,8 @@ def server_stats():
     disk = psutil.disk_usage('/').percent
     return jsonify({'cpu': cpu, 'ram': ram, 'disk': disk})
 
-
 # --- TASK API ROUTES ---
+
 
 @main.route('/api/tasks/add', methods=['POST'])
 @login_required
@@ -76,14 +115,8 @@ def add_task():
 
     if content:
         new_task = Task(
-            content=content,
-            priority=priority,
-            color=color,
-            recurrence=recurrence,
-            category=category,
-            is_habit=is_habit,
-            complete=False,  # Explicitly False on creation
-            due_date=due_date,
+            content=content, priority=priority, color=color, recurrence=recurrence,
+            category=category, is_habit=is_habit, complete=False, due_date=due_date,
             author=current_user
         )
         db.session.add(new_task)
@@ -100,7 +133,6 @@ def edit_task(id):
         return jsonify({'success': False}), 403
 
     data = request.json
-
     if 'content' in data:
         task.content = data['content']
     if 'priority' in data:
@@ -137,38 +169,58 @@ def toggle_task(id):
 
     today = datetime.now(timezone.utc).date()
 
-    # LOGIC: If currently Done -> We are Unchecking it
+    # 1. UNCHECKING (Undo)
     if task.complete:
         task.complete = False
         task.last_completed = None
 
-        # ✅ REMOVE HISTORY (Fixes "Active by Default" bug)
-        # If I uncheck it today, remove today's dot.
-        history_log = TaskHistory.query.filter_by(
-            task_id=task.id,
-            completed_date=today
-        ).first()
+        # If I uncheck a Daily task, bring date back to TODAY
+        if task.recurrence == 'daily':
+            task.due_date = datetime.now(timezone.utc)
 
+        history_log = TaskHistory.query.filter_by(
+            task_id=task.id, completed_date=today).first()
         if history_log:
             db.session.delete(history_log)
 
-    # LOGIC: If currently Not Done -> We are Checking it
+    # 2. CHECKING (Done)
     else:
         task.complete = True
         task.last_completed = datetime.now(timezone.utc)
 
-        # ✅ ADD HISTORY
-        existing_log = TaskHistory.query.filter_by(
-            task_id=task.id,
-            completed_date=today
-        ).first()
+        # Move Date Forward instantly
+        if task.recurrence == 'daily':
+            task.due_date = datetime.now(timezone.utc) + timedelta(days=1)
+        elif task.recurrence == 'weekly':
+            task.due_date = datetime.now(timezone.utc) + timedelta(weeks=1)
 
+        existing_log = TaskHistory.query.filter_by(
+            task_id=task.id, completed_date=today).first()
         if not existing_log:
             log = TaskHistory(task_id=task.id, completed_date=today)
             db.session.add(log)
 
     db.session.commit()
-    return jsonify({'success': True, 'new_state': task.complete})
+
+    # ✅ Calculate New Date Label for Frontend
+    date_label = ""
+    if task.due_date:
+        delta = (task.due_date.date() - today).days
+        if delta < 0:
+            date_label = f"{abs(delta)}d overdue"
+        elif delta == 0:
+            date_label = "Today"
+        elif delta == 1:
+            date_label = "Tomorrow"
+        else:
+            date_label = f"{delta}d left"
+
+    return jsonify({
+        'success': True,
+        'new_state': task.complete,
+        'new_date_label': date_label,
+        'priority': task.priority
+    })
 
 
 @main.route('/api/tasks/<int:id>/delete', methods=['DELETE'])
@@ -176,22 +228,18 @@ def toggle_task(id):
 def delete_task(id):
     task = Task.query.get_or_404(id)
     if task.user_id == current_user.id:
-        # 1. Delete all history logs for this task first
         TaskHistory.query.filter_by(task_id=id).delete()
-
-        # 2. Delete the task itself
         db.session.delete(task)
         db.session.commit()
         return jsonify({'success': True})
     return jsonify({'success': False}), 403
 
+# --- CHART DATA ROUTE ---
 
-# --- CHART DATA ROUTE (THE CRITICAL PART) ---
 
 @main.route('/api/stats/charts')
 @login_required
 def get_chart_data():
-    # 1. RADIAL DATA
     today = datetime.now(timezone.utc).date()
     start_of_week = today - timedelta(days=today.weekday())
     categories = ['general', 'work', 'personal', 'dev', 'health']
@@ -207,12 +255,11 @@ def get_chart_data():
             Task.complete == False
         ).count()
         total_weekly = completed_weekly + pending
-
         percentage = int((completed_weekly / total_weekly)
                          * 100) if total_weekly > 0 else 0
         radial_series.append(percentage)
 
-    # 2. HEATMAP DATA (With Color Injection)
+    # HEATMAP
     start_date = today.replace(day=1)
     next_month = today.replace(day=28) + timedelta(days=4)
     end_date = next_month - timedelta(days=next_month.day)
@@ -231,27 +278,31 @@ def get_chart_data():
 
         data_points = []
         current = start_date
-
-        # ✅ Get the correct color for this task
         active_color = task.color if task.color else '#2ecc71'
 
         while current <= end_date:
             if current in completed_dates:
                 val = 100
-                f_color = active_color  # Done = Task Color
+                f_color = active_color
             else:
                 val = 0
-                f_color = '#1A1A1A'     # Missed = Dark Grey
+                f_color = '#1A1A1A'
 
             date_label = current.strftime("%d")
             data_points.append({
                 'x': date_label,
                 'y': val,
-                'fillColor': f_color  # ✅ Sends color to frontend
+                'fillColor': f_color,
+                'real_date': current.strftime("%Y-%m-%d")
             })
             current += timedelta(days=1)
 
-        heatmap_series.append({'name': task.content, 'data': data_points})
+        heatmap_series.append({
+            'name': task.content,
+            'id': task.id,
+            'color': active_color,  # ✅ SENDING REAL COLOR FOR CLICKING
+            'data': data_points
+        })
 
     return jsonify({
         'radial': radial_series,
@@ -287,6 +338,36 @@ def logout():
 @login_required
 def dev_panel():
     return render_template('main/dev_panel.html', user=current_user)
+
+
+@main.route('/api/test/seed', methods=['POST'])
+@login_required
+def seed_test_data():
+    today = datetime.now(timezone.utc).date()
+    test_tasks = [
+        {'content': '🔥 Test: Urgent', 'priority': 'urgent', 'category': 'dev',
+            'delta': -2, 'color': '#e74c3c', 'habit': False},
+        {'content': '🧘 Test: Habit', 'priority': 'normal',
+            'category': 'health', 'delta': 0, 'color': '#f1c40f', 'habit': True}
+    ]
+    for t in test_tasks:
+        due = today + timedelta(days=t['delta'])
+        task = Task(content=t['content'], priority=t['priority'], category=t['category'], color=t['color'], due_date=datetime.combine(
+            due, datetime.min.time()), is_habit=t['habit'], complete=False, author=current_user)
+        db.session.add(task)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@main.route('/api/test/midnight', methods=['POST'])
+@login_required
+def simulate_midnight():
+    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+    tasks = Task.query.filter_by(user_id=current_user.id, complete=True).all()
+    for t in tasks:
+        t.last_completed = yesterday
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 @main.route('/api/trigger/daily', methods=['POST'])

@@ -10,13 +10,16 @@
       <h2>Notification Triggers</h2>
     </div>
 
-    <div class="tasks-card" style="display: flex; gap: 20px; flex-wrap: wrap">
+    <div
+      class="tasks-card"
+      style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 30px"
+    >
       <div class="dev-card">
         <h3>Daily Briefing</h3>
         <p>
           Simulates the 8:00 AM triggers (Today, Tomorrow, Overdue, Urgent).
         </p>
-        <button class="btn-sm" onclick="triggerJob('daily')">
+        <button class="btn-sm" onclick="triggerJob('trigger/daily')">
           Run Daily Logic
         </button>
       </div>
@@ -24,8 +27,44 @@
       <div class="dev-card">
         <h3>Weekly Digest</h3>
         <p>Simulates Sunday 8:00 PM trigger (Next 7 days summary).</p>
-        <button class="btn-sm" onclick="triggerJob('weekly')">
+        <button class="btn-sm" onclick="triggerJob('trigger/weekly')">
           Run Weekly Logic
+        </button>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <h2>Data & Simulation</h2>
+    </div>
+
+    <div class="tasks-card" style="display: flex; gap: 20px; flex-wrap: wrap">
+      <div class="dev-card" style="border-color: rgba(59, 91, 219, 0.3)">
+        <h3 style="color: #3b5bdb">🧪 Test Data</h3>
+        <p>
+          Generates 4 tasks (Urgent, Future, Habit) to verify Sorting &
+          Filtering.
+        </p>
+        <button
+          class="btn-sm"
+          style="background: #3b5bdb"
+          onclick="triggerJob('test/seed')"
+        >
+          Generate Seed Data
+        </button>
+      </div>
+
+      <div class="dev-card" style="border-color: rgba(241, 196, 15, 0.3)">
+        <h3 style="color: #f1c40f">🌙 Simulate Midnight</h3>
+        <p>
+          Moves all "Done" tasks to Yesterday. They should vanish from
+          Dashboard.
+        </p>
+        <button
+          class="btn-sm"
+          style="background: #f1c40f; color: #000"
+          onclick="triggerJob('test/midnight')"
+        >
+          Run Cleanup
         </button>
       </div>
     </div>
@@ -35,17 +74,22 @@
 </div>
 
 <script>
-  function triggerJob(type) {
+  function triggerJob(endpoint) {
     const consoleDiv = document.getElementById("dev-console");
-    consoleDiv.innerHTML = `<span style="color: yellow;">Processing ${type}...</span>`;
+    consoleDiv.innerHTML = `<span style="color: yellow;">Processing ${endpoint}...</span>`;
 
-    fetch(`/api/trigger/${type}`, { method: "POST" })
+    // Note: 'endpoint' should be 'trigger/daily' or 'test/seed' etc.
+    fetch(`/api/${endpoint}`, { method: "POST" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          consoleDiv.innerHTML = `<span style="color: #2ecc71;">✔ Success: ${data.message}</span>`;
+          consoleDiv.innerHTML = `<span style="color: #2ecc71;">✔ Success: ${data.message || "Done"}</span>`;
+          // If it was a data change, offer to go back
+          if (endpoint.includes("test")) {
+            consoleDiv.innerHTML += ` <a href="/" style="color: #fff; text-decoration: underline; margin-left: 10px;">Go to Dashboard</a>`;
+          }
         } else {
-          consoleDiv.innerHTML = `<span style="color: #e74c3c;">✘ Error. Check server logs.</span>`;
+          consoleDiv.innerHTML = `<span style="color: #e74c3c;">✘ Error: ${data.error}</span>`;
         }
       })
       .catch((err) => {
