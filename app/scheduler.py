@@ -62,19 +62,33 @@ def check_daily_notifications(app):
 
         today = datetime.now(timezone.utc).date()
 
+        # 1. Query Tasks
         overdue = Task.query.filter(
-            Task.user_id == user.id, Task.complete == False, db.func.date(Task.due_date) < today).all()
-        due_today = Task.query.filter(
-            Task.user_id == user.id, Task.complete == False, db.func.date(Task.due_date) == today).all()
+            Task.user_id == user.id,
+            Task.complete == False,
+            db.func.date(Task.due_date) < today
+        ).all()
 
+        due_today = Task.query.filter(
+            Task.user_id == user.id,
+            Task.complete == False,
+            db.func.date(Task.due_date) == today
+        ).all()
+
+        # 2. LOGIC CHANGE: If empty, send a "Relax" message instead of silence
         if not overdue and not due_today:
+            send_telegram_message(
+                "<b>☀️ Morning Briefing</b>\n\nNo tasks scheduled for today. Enjoy your freedom! 🏝️")
             return
 
+        # 3. Build Message (Normal Case)
         msg = "<b>☀️ Morning Briefing</b>\n\n"
+
         if overdue:
             msg += f"⚠️ <b>{len(overdue)} Overdue:</b>\n"
             for t in overdue:
                 msg += f"• {t.content}\n"
+
         if due_today:
             msg += f"\n📅 <b>{len(due_today)} For Today:</b>\n"
             for t in due_today:
