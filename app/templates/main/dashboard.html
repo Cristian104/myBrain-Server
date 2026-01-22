@@ -135,6 +135,8 @@
             class="task-row {% if task.complete %}completed{% endif %}"
             id="task-{{ task.id }}"
             data-category="{{ task.category or 'general' }}"
+            {# --- FIX: Hide Completed Categorized tasks on load (prevents reappearing on refresh) --- #}
+            style="{% if task.complete and task.category and task.category != 'general' %}display: none;{% endif %}"
           >
             <div
               class="priority-dot"

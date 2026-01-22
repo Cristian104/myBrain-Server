@@ -7,7 +7,7 @@
 
   <div class="panel-right" style="max-width: 800px; margin-top: 20px">
     <div class="section-header">
-      <h2>Notification Triggers</h2>
+      <h2>🤖 Bot Triggers</h2>
     </div>
 
     <div
@@ -15,35 +15,46 @@
       style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 30px"
     >
       <div class="dev-card">
-        <h3>Daily Briefing</h3>
-        <p>
-          Simulates the 8:00 AM triggers (Today, Tomorrow, Overdue, Urgent).
-        </p>
+        <h3>☀️ Morning Briefing</h3>
+        <p>Simulates 8:00 AM. Sends Today's & Overdue tasks.</p>
         <button class="btn-sm" onclick="triggerJob('trigger/daily')">
-          Run Daily Logic
+          Test Morning Alert
         </button>
       </div>
 
-      <div class="dev-card">
-        <h3>Weekly Digest</h3>
-        <p>Simulates Sunday 8:00 PM trigger (Next 7 days summary).</p>
-        <button class="btn-sm" onclick="triggerJob('trigger/weekly')">
-          Run Weekly Logic
+      <div class="dev-card" style="border-color: rgba(46, 204, 113, 0.3)">
+        <h3 style="color: #2ecc71">🌙 Nightly Summary</h3>
+        <p>Simulates 10:00 PM. Sends list of completed tasks.</p>
+        <button
+          class="btn-sm"
+          style="background: #2ecc71"
+          onclick="triggerJob('trigger/summary')"
+        >
+          Test Nightly Report
+        </button>
+      </div>
+
+      <div class="dev-card" style="border-color: rgba(155, 89, 182, 0.3)">
+        <h3 style="color: #9b59b6">📊 Sunday Graph</h3>
+        <p>Simulates Sunday 8:00 PM. Generates & sends the dot grid image.</p>
+        <button
+          class="btn-sm"
+          style="background: #9b59b6"
+          onclick="triggerJob('trigger/weekly')"
+        >
+          Test Graph Image
         </button>
       </div>
     </div>
 
     <div class="section-header">
-      <h2>Data & Simulation</h2>
+      <h2>🧪 Data & Simulation</h2>
     </div>
 
     <div class="tasks-card" style="display: flex; gap: 20px; flex-wrap: wrap">
       <div class="dev-card" style="border-color: rgba(59, 91, 219, 0.3)">
-        <h3 style="color: #3b5bdb">🧪 Test Data</h3>
-        <p>
-          Generates 4 tasks (Urgent, Future, Habit) to verify Sorting &
-          Filtering.
-        </p>
+        <h3 style="color: #3b5bdb">Test Data</h3>
+        <p>Generates 4 tasks (Urgent, Future, Habit) to verify Sorting.</p>
         <button
           class="btn-sm"
           style="background: #3b5bdb"
@@ -54,11 +65,8 @@
       </div>
 
       <div class="dev-card" style="border-color: rgba(241, 196, 15, 0.3)">
-        <h3 style="color: #f1c40f">🌙 Simulate Midnight</h3>
-        <p>
-          Moves all "Done" tasks to Yesterday. They should vanish from
-          Dashboard.
-        </p>
+        <h3 style="color: #f1c40f">Simulate Midnight</h3>
+        <p>Moves all "Done" tasks to Yesterday to test cleanup.</p>
         <button
           class="btn-sm"
           style="background: #f1c40f; color: #000"
@@ -76,15 +84,13 @@
 <script>
   function triggerJob(endpoint) {
     const consoleDiv = document.getElementById("dev-console");
-    consoleDiv.innerHTML = `<span style="color: yellow;">Processing ${endpoint}...</span>`;
+    consoleDiv.innerHTML = `<span style="color: yellow;">Processing /api/${endpoint}...</span>`;
 
-    // Note: 'endpoint' should be 'trigger/daily' or 'test/seed' etc.
     fetch(`/api/${endpoint}`, { method: "POST" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
           consoleDiv.innerHTML = `<span style="color: #2ecc71;">✔ Success: ${data.message || "Done"}</span>`;
-          // If it was a data change, offer to go back
           if (endpoint.includes("test")) {
             consoleDiv.innerHTML += ` <a href="/" style="color: #fff; text-decoration: underline; margin-left: 10px;">Go to Dashboard</a>`;
           }
@@ -106,18 +112,21 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     flex: 1;
     min-width: 250px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
   .dev-card h3 {
     color: var(--accent-blue);
     margin-bottom: 10px;
+    font-size: 1.1rem;
   }
   .dev-card p {
     color: #aaa;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     margin-bottom: 15px;
-    height: 40px;
+    line-height: 1.4;
   }
-
   .dev-console {
     margin-top: 20px;
     background: #000;
@@ -126,6 +135,7 @@
     padding: 15px;
     border-radius: 6px;
     border: 1px solid #333;
+    min-height: 50px;
   }
 </style>
 {% endblock %}

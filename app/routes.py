@@ -7,7 +7,7 @@ import psutil
 from . import db
 from .models import User, Task, TaskHistory
 from .telegram_bot import send_telegram_message
-from app.scheduler import check_daily_notifications, check_weekly_briefing
+from app.scheduler import check_daily_notifications, check_weekly_briefing, check_daily_summary, check_weekly_briefing
 
 # --- BLUEPRINT DEFINITIONS ---
 main = Blueprint('main', __name__)
@@ -377,14 +377,23 @@ def trigger_daily():
     return jsonify({'success': True})
 
 
-@main.route('/api/trigger/weekly', methods=['POST'])
-@login_required
-def trigger_weekly():
-    check_weekly_briefing(current_app._get_current_object())
-    return jsonify({'success': True})
-
-
 @main.route('/settings')
 @login_required
 def settings():
     return render_template('main/settings.html', user=current_user)
+
+
+@main.route('/api/trigger/summary', methods=['POST'])
+@login_required
+def trigger_summary():
+    """Test the Nightly Summary immediately"""
+    check_daily_summary(current_app._get_current_object())
+    return jsonify({'success': True, 'message': 'Nightly summary sent!'})
+
+
+@main.route('/api/trigger/weekly', methods=['POST'])
+@login_required
+def trigger_weekly():
+    """Trigger Sunday Graph (8 PM Logic)"""
+    check_weekly_briefing(current_app._get_current_object())
+    return jsonify({'success': True})
