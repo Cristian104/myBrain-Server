@@ -4,8 +4,9 @@
 let editingTaskId = null; 
 let deletePendingId = null;
 let radialChartInstance = null;
+let statsInterval = null; // Track the interval ID
 
-// --- 1. STATS ---
+// --- 1. SMART STATS POLLING (Optimized) ---
 function updateStats() {
     fetch('/api/stats').then(res=>res.json()).then(data => {
         if(document.getElementById('cpu-text')) {
@@ -18,10 +19,33 @@ function updateStats() {
         }
     }).catch(console.error);
 }
-updateStats();
-setInterval(updateStats, 5000);
 
-// --- 2. QUICK ADD & MODAL ---
+function startPolling() {
+    if (!statsInterval) {
+        updateStats(); // Run once immediately
+        statsInterval = setInterval(updateStats, 5000);
+        // Optional: console.log("⚡ Monitoring Active");
+    }
+}
+
+function stopPolling() {
+    if (statsInterval) {
+        clearInterval(statsInterval);
+        statsInterval = null;
+        // Optional: console.log("💤 Monitoring Paused");
+    }
+}
+
+// Event Listener: Pause when user leaves tab, Resume when they return
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stopPolling();
+    else startPolling();
+});
+
+// Start initially
+startPolling();
+
+// --- 2. QUICK ADD LOGIC ---
 function toggleQuickAdd() {
     document.getElementById('quick-add-row').classList.toggle('active');
     document.getElementById('quick-task-input').focus();
@@ -98,7 +122,7 @@ function createTaskAPI(content, priority, date, color, category = 'general') {
     }).then(res => res.json()).then(data => { if(data.success) location.reload(); });
 }
 
-// --- 3. FILTERING LOGIC ---
+// --- 3. FILTERING LOGIC (Preserve General in 'All') ---
 function filterTasks(category, btnElement) {
     document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
     btnElement.classList.add('active');
@@ -155,7 +179,7 @@ function toggleTask(id) {
             row.style.display = 'flex'; 
         }
 
-        // ✅ UPDATE DATE LABEL INSTANTLY
+        // UPDATE DATE LABEL INSTANTLY
         if (data.new_date_label) {
             const metaSpan = row.querySelector('.task-meta');
             if (metaSpan) {
@@ -169,18 +193,15 @@ function toggleTask(id) {
                 } else {
                     html += data.new_date_label;
                 }
-                
-                // Assuming it's recurring if we are updating the date
                 html += ` • <i class="fas fa-sync-alt" title="Repeats"></i>`;
                 metaSpan.innerHTML = html;
             }
         }
-
         loadCharts();
     });
 }
 
-// --- 4. GRAPH INTERACTION ---
+// --- 4. GRAPH INTERACTION (Color Fixed) ---
 function loadCharts() {
     fetch('/api/stats/charts')
     .then(res => res.json())
@@ -243,7 +264,7 @@ function loadCharts() {
                         dot.style.backgroundColor = '#1A1A1A';
                         dot.setAttribute('data-date', `${point.x}: Missed`);
                         
-                        // ✅ FIX: PASSING THE REAL COLOR (habit.color), NOT THE EMPTY COLOR (point.fillColor)
+                        // Pass the REAL color (habit.color) not the empty one
                         dot.onclick = function() {
                            handleDotClick(dot, habit.id, point.real_date, habit.color); 
                         };
@@ -259,9 +280,7 @@ function loadCharts() {
     .catch(console.error);
 }
 
-// --- 5. DOT CLICK HANDLER ---
-let clickTimers = {};
-
+// --- 5. DOT CLICK HANDLER (Instant Update) ---
 function handleDotClick(dotElement, taskId, dateStr, taskColor) {
     if (!dotElement.classList.contains('confirming')) {
         // CLICK 1: DIM COLOR
