@@ -10,7 +10,9 @@ login_manager = LoginManager()
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'dev-secret-key'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+
+    # ✅ FIX: Point to the 'instance' folder so Docker saves it!
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/db.sqlite'
 
     db.init_app(app)
 
@@ -18,15 +20,15 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
 
-    # --- FIX START: Add the User Loader ---
-    from .models import User  # Import inside to avoid circular import
+    # --- User Loader ---
+    from .models import User
 
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
-    # --- FIX END --------------------------
+    # -------------------
 
-    # Start Bot Listener (Only if not in debug reload)
+    # Start Bot Listener (Safety Switch)
     if os.environ.get('ENABLE_BOT') == 'true':
         if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
             from .telegram_bot import start_bot_listener
