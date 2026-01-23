@@ -1137,3 +1137,109 @@ h1 {
     from { transform: scale(1); }
     to { transform: scale(1.1); }
 }
+
+/* --- DELETE ANIMATIONS --- */
+
+/* State 1: First Click (Warning State) */
+.task-row.confirm-delete-mode {
+    opacity: 0.4;             /* Dim the whole row */
+    filter: grayscale(100%);  /* Remove color */
+    transition: all 0.3s ease;
+    border-left: 4px solid #e74c3c !important; /* Red indicator */
+}
+
+/* State 2: Actually Deleting (Slide Out) */
+.task-row.deleting {
+    transform: translateX(100%); /* Slide to right */
+    opacity: 0;
+    height: 0; /* Collapse space */
+    margin: 0;
+    padding: 0;
+    transition: all 0.5s ease;
+    overflow: hidden;
+}
+
+/* --- COMPLETION ANIMATIONS --- */
+
+/* State 1: Just Checked (Slide Down visual trick) */
+.task-row.completing {
+    transform: scale(0.95);
+    opacity: 0.5;
+    transition: all 0.4s ease;
+}
+
+/* New Entry Animation (for when it reappears at bottom) */
+.task-row.appearing {
+    animation: slideInUp 0.5s ease forwards;
+}
+
+@keyframes slideInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- CHART ANIMATIONS --- */
+/* Makes the circle fill up smoothly instead of jumping */
+.progress-ring__circle {
+    transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+
+/* --- ANIMATIONS --- */
+
+/* 1. Leaving: Slide Right & Fade Out */
+.task-row.animating-out {
+    transform: translateX(30px) scale(0.95);
+    opacity: 0;
+    transition: all 0.3s ease-in-out;
+}
+
+/* 2. Arriving: Slide Up from Bottom */
+.task-row.animating-in {
+    animation: slideUpFade 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes slideUpFade {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* --- DELETE STATES --- */
+
+/* Warning State (First Click) - This fixes the "Dimming" issue */
+.task-row.confirm-delete-mode {
+    opacity: 0.5;
+    background: rgba(231, 76, 60, 0.05); /* Slight red tint */
+    border-left: 4px solid #e74c3c !important;
+    transition: all 0.3s ease;
+}
+
+/* Actually Deleting */
+.task-row.deleting {
+    transform: translateX(100%);
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+    transition: all 0.5s ease;
+}
+
+/* Smooth Container Growth Trick */
+.panel-right {
+    /* Ensure the panel itself transitions smoothly */
+    transition: all 0.3s ease-in-out;
+}
+
+/* Ensure the list inside doesn't overflow during animation */
+#task-list {
+    overflow: hidden; 
+}
