@@ -11,8 +11,16 @@ def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'dev-secret-key'
 
-    # ✅ FIX: Point to the 'instance' folder so Docker saves it!
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/db.sqlite'
+    # 1. Construct the absolute path
+    # 'app.instance_path' is automatically set by Flask to /app/instance
+    db_path = os.path.join(app.instance_path, 'db.sqlite')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+
+    # 2. AUTO-CREATE THE FOLDER (Crucial Step)
+    try:
+        os.makedirs(app.instance_path)
+    except OSError:
+        pass  # Folder already exists, ignore error
 
     db.init_app(app)
 
