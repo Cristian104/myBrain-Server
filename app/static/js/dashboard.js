@@ -5,6 +5,7 @@ let editingTaskId = null;
 let deletePendingId = null;
 let radialChartInstance = null;
 let statsInterval = null; // Track the interval ID
+let currentDataVersion = null; // Track the version
 
 // --- 1. SMART STATS POLLING (Optimized) ---
 function updateStats() {
@@ -17,6 +18,17 @@ function updateStats() {
             document.getElementById('disk-text').innerText = data.disk + '%';
             document.getElementById('disk-bar').style.width = data.disk + '%';
         }
+
+        // AUTO-SYNC LOGIC
+        if (currentDataVersion === null) {
+            // First load: just save the version
+            currentDataVersion = data.data_version;
+        } else if (data.data_version > currentDataVersion) {
+            // Server has new data! Reload instantly.
+            console.log("♻️ Data changed remoteley. Refreshing...");
+            location.reload();
+        }
+        
     }).catch(console.error);
 }
 

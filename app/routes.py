@@ -1,3 +1,5 @@
+from . import state
+from .telegram_bot import send_task_alert
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, render_template, redirect, url_for, jsonify, request, flash, current_app
 from flask_login import login_required, current_user, login_user, logout_user
@@ -83,14 +85,6 @@ def add_task_history(id):
         return jsonify({'success': False}), 400
 
 
-@main.route('/api/stats')
-@login_required
-def server_stats():
-    cpu = psutil.cpu_percent(interval=1)
-    ram = psutil.virtual_memory().percent
-    disk = psutil.disk_usage('/').percent
-    return jsonify({'cpu': cpu, 'ram': ram, 'disk': disk})
-
 # --- TASK API ROUTES ---
 
 
@@ -121,6 +115,7 @@ def add_task():
         )
         db.session.add(new_task)
         db.session.commit()
+        state.touch()
         return jsonify({'success': True, 'id': new_task.id})
     return jsonify({'success': False}), 400
 
@@ -157,6 +152,7 @@ def edit_task(id):
             task.due_date = None
 
     db.session.commit()
+    state.touch()
     return jsonify({'success': True})
 
 
@@ -201,6 +197,7 @@ def toggle_task(id):
             db.session.add(log)
 
     db.session.commit()
+    state.touch()
 
     # ✅ Calculate New Date Label for Frontend
     date_label = ""
@@ -231,6 +228,7 @@ def delete_task(id):
         TaskHistory.query.filter_by(task_id=id).delete()
         db.session.delete(task)
         db.session.commit()
+        state.touch()
         return jsonify({'success': True})
     return jsonify({'success': False}), 403
 
@@ -397,3 +395,41 @@ def trigger_weekly():
     """Trigger Sunday Graph (8 PM Logic)"""
     check_weekly_briefing(current_app._get_current_object())
     return jsonify({'success': True})
+
+# In app/routes.py
+
+
+@main.route('/api/test/alert', methods=['POST'])
+@login_required
+def test_alert():
+    """Creates a fake urgent task and sends an alert with buttons."""
+    # Create a temporary fake task object (not saved to DB just for display)
+    # OR better: Pick a real task or create a dummy one
+
+    # Let's create a real dummy task so the ID works
+    dummy = Task(content="🚨 Verify Bot Buttons", priority="urgent",
+                 user_id=current_user.id, complete=False)
+    db.session.add(dummy)
+    db.session.commit()
+
+    send_task_alert(dummy)
+
+    return jsonify({'success': True, 'message': 'Alert sent with buttons!'})
+
+
+# Place this somewhere in your Main Routes section (e.g., around line 80)
+@main.route('/api/stats')
+@login_required
+def server_stats():
+    # 1. Get System Stats
+    cpu = psutil.cpu_percent(interval=None)  # Non-blocking
+    ram = psutil.virtual_memory().percent
+    disk = psutil.disk_usage('/').percent
+
+    # 2. Get Data Version (The magic ingredient)
+    return jsonify({
+        'cpu': cpu,
+        'ram': ram,
+        'disk': disk,
+        'data_version': state.last_change_ts
+    })
