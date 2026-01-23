@@ -160,12 +160,40 @@ function filterTasks(category, btnElement) {
 function handleDeleteClick(event, id) {
     event.stopPropagation();
     const row = document.getElementById(`task-${id}`);
+    const btn = event.currentTarget; // The delete button itself
+
+    // 1. HABIT CHECK (Keep this)
     const isHabit = row.querySelector('.task-info').getAttribute('data-ishabit') === 'true';
-    if (isHabit && !confirm("⚠️ Warning: Deleting a habit removes its history. Continue?")) return;
+    if (isHabit) {
+        if (!confirm("⚠️ Warning: Deleting a habit removes its history. Continue?")) return;
+        // If confirmed, proceed directly to delete
+    } 
+    // 2. NORMAL TASK: Double-Click Safety
+    else {
+        // If NOT in "confirm mode" yet, add the class and stop.
+        if (!btn.classList.contains('confirm-delete')) {
+            btn.classList.add('confirm-delete');
+            btn.innerHTML = '<i class="fas fa-trash-alt"></i>'; // Optional: Change icon?
+            
+            // Auto-reset after 2 seconds if not clicked again
+            setTimeout(() => {
+                btn.classList.remove('confirm-delete');
+            }, 2000);
+            return; // <--- STOP HERE
+        }
+    }
     
+    // 3. EXECUTE DELETE (Only runs if confirmed or is habit)
     row.classList.add('deleting');
     setTimeout(() => {
-        fetch(`/api/tasks/${id}/delete`, { method: 'DELETE' }).then(res => res.json()).then(data => { if(data.success) { row.remove(); loadCharts(); } });
+        fetch(`/api/tasks/${id}/delete`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => { 
+                if(data.success) { 
+                    row.remove(); 
+                    loadCharts(); 
+                } 
+            });
     }, 300);
 }
 
