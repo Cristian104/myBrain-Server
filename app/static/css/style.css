@@ -1124,3 +1124,16 @@ h1 {
     box-shadow: 0 4px 15px rgba(0,0,0,0.8);
     z-index: 101; /* Higher than the dot */
 }
+
+/* Delete Confirmation State */
+.action-btn.confirm-delete {
+    color: #e74c3c !important; /* Bright Red */
+    background: rgba(231, 76, 60, 0.1);
+    border: 1px solid #e74c3c;
+    animation: pulse 0.5s infinite alternate;
+}
+
+@keyframes pulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.1); }
+}

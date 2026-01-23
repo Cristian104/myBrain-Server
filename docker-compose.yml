@@ -11,3 +11,4 @@ services:
       - ./instance:/app/instance
     environment:
       - TZ=Europe/Warsaw
+      - ENABLE_BOT=true  # <--- ADD THIS LINE

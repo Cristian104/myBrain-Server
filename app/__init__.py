@@ -27,9 +27,10 @@ def create_app():
     # --- FIX END --------------------------
 
     # Start Bot Listener (Only if not in debug reload)
-    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        from .telegram_bot import start_bot_listener
-        start_bot_listener(app)
+    if os.environ.get('ENABLE_BOT') == 'true':
+        if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+            from .telegram_bot import start_bot_listener
+            start_bot_listener(app)
 
     # Register Blueprints
     from .routes import main as main_blueprint
