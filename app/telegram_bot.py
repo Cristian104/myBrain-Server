@@ -82,18 +82,12 @@ def send_task_alert(task):
 def handle_query(call):
     """This function runs when you click a button."""
 
-    # "done_123" -> action="done", task_id="123"
+    # --- FIX: Force Fresh Database Connection ---
+    # This clears the "stale" session so we see new tasks created by the website
+    db.session.remove()
+    # ------------------------------------------
+
     action, task_id = call.data.split('_')
-
-    # We need to use the Flask Application Context to access the DB
-    # (Note: 'current_app' won't work here directly, we rely on the thread context)
-    # TRICK: We passed the app context in 'start_bot_listener', but 'telebot'
-    # handles threads differently. We will re-import create_app or use a localized DB approach.
-    # SIMPLIFICATION for now: We assume the thread has access if set up correctly.
-
-    # Ideally, we pass the 'app' object to the bot handler, but decorators make that hard.
-    # WORKAROUND: Import 'db' and push context manually if needed.
-    # For now, let's try standard access.
 
     try:
         # Acknowledge the click (stops the button from loading/spinning)
@@ -102,7 +96,9 @@ def handle_query(call):
         task = Task.query.get(int(task_id))
 
         if not task:
-            bot.send_message(CHAT_ID, "⚠️ Task not found (maybe deleted?).")
+            # If we STILL can't find it, it's genuinely gone
+            bot.send_message(call.message.chat.id,
+                             "⚠️ Task not found (maybe deleted?).")
             return
 
         if action == "done":
@@ -110,7 +106,7 @@ def handle_query(call):
             task.complete = True
             task.last_completed = datetime.now(timezone.utc)
 
-            # (Optional) Add to history if it's a habit
+            # Habit History Logic
             if task.is_habit:
                 today = datetime.now(timezone.utc).date()
                 exists = TaskHistory.query.filter_by(
@@ -121,18 +117,20 @@ def handle_query(call):
                     db.session.add(h)
 
             db.session.commit()
+
+            # 2. SIGNAL THE CHANGE (Auto-Refresh Dashboard)
+            from . import state
             state.touch()
 
-            # 2. Update the Message (Remove buttons, show success)
+            # 3. Update the Message
             new_text = f"✅ <b>COMPLETED:</b>\n{task.content}"
-            bot.edit_message_text(
-                chat_id=CHAT_ID, message_id=call.message.message_id, text=new_text, parse_mode='HTML')
+            bot.edit_message_text(chat_id=call.message.chat.id,
+                                  message_id=call.message.message_id, text=new_text, parse_mode='HTML')
 
         elif action == "snooze":
-            bot.send_message(
-                CHAT_ID, "💤 Snooze not implemented yet, but good try!")
+            bot.send_message(call.message.chat.id,
+                             "💤 Snooze not implemented yet.")
 
     except Exception as e:
         print(f"❌ Button Error: {e}")
-        # In case of DB context error, we might need a safer app access strategy
-        bot.send_message(CHAT_ID, f"Error: {str(e)}")
+        bot.send_message(call.message.chat.id, f"Error: {str(e)}")
