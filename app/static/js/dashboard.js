@@ -2,16 +2,16 @@
 
 // --- GLOBAL VARIABLES ---
 let editingTaskId = null; 
+let deletingTaskId = null; 
 let statsInterval = null; 
 let currentDataVersion = null; 
-let lastActionTime = 0; // Timestamp of last user interaction to block auto-reloads
+let lastActionTime = 0; 
 
-// --- 1. SMART STATS POLLING (With Grace Period) ---
+// --- 1. SMART STATS POLLING ---
 function updateStats() {
     fetch('/api/stats')
         .then(res => res.json())
         .then(data => {
-            // Update Text UI
             if(document.getElementById('cpu-text')) {
                 document.getElementById('cpu-text').innerText = data.cpu + '%';
                 document.getElementById('cpu-bar').style.width = data.cpu + '%';
@@ -21,17 +21,13 @@ function updateStats() {
                 document.getElementById('disk-bar').style.width = data.disk + '%';
             }
 
-            // AUTO-SYNC LOGIC
             if (currentDataVersion === null) {
                 currentDataVersion = data.data_version;
             } else if (data.data_version > currentDataVersion) {
-                // CHECK: Did the user do something recently (last 5 seconds)?
                 if (Date.now() - lastActionTime < 5000) {
-                    // YES: User is active. Don't reload. Sync silently.
                     console.log("♻️ Local update detected. Silently syncing version.");
                     currentDataVersion = data.data_version;
                 } else {
-                    // NO: This is a remote change (or user is idle). Refresh.
                     console.log("♻️ Remote change detected. Refreshing...");
                     location.reload();
                 }
@@ -40,37 +36,19 @@ function updateStats() {
         .catch(console.error);
 }
 
-// Helper to manually fetch the new version after we do something
 function syncDataVersion() {
-    return fetch('/api/stats')
-        .then(res => res.json())
-        .then(data => {
-            currentDataVersion = data.data_version; 
-        });
+    return fetch('/api/stats').then(res => res.json()).then(data => { currentDataVersion = data.data_version; });
 }
 
 function startPolling() {
-    if (!statsInterval) {
-        updateStats(); 
-        statsInterval = setInterval(updateStats, 5000);
-    }
+    if (!statsInterval) { updateStats(); statsInterval = setInterval(updateStats, 5000); }
 }
+function stopPolling() { if (statsInterval) { clearInterval(statsInterval); statsInterval = null; } }
 
-function stopPolling() {
-    if (statsInterval) {
-        clearInterval(statsInterval);
-        statsInterval = null;
-    }
-}
-
-document.addEventListener("visibilitychange", () => {
-    if (document.hidden) stopPolling();
-    else startPolling();
-});
-
+document.addEventListener("visibilitychange", () => { document.hidden ? stopPolling() : startPolling(); });
 startPolling();
 
-// --- 2. QUICK ADD & MODALS ---
+// --- 2. MODALS ---
 function toggleQuickAdd() {
     document.getElementById('quick-add-row').classList.toggle('active');
     document.getElementById('quick-task-input').focus();
@@ -79,8 +57,7 @@ function toggleQuickAdd() {
 function handleQuickEnter(e) {
     if(e.key === 'Enter') {
         const content = e.target.value;
-        const categorySelect = document.getElementById('quick-category');
-        const category = categorySelect ? categorySelect.value : 'general';
+        const category = document.getElementById('quick-category')?.value || 'general';
         if(content) {
             createTaskAPI(content, 'normal', null, '#3b5bdb', category);
             e.target.value = '';
@@ -110,6 +87,55 @@ function openModal(isEdit=false) {
 function closeModal() { document.getElementById('task-modal').classList.remove('active'); }
 function selectColor(hex) { document.getElementById('m-color').value = hex; }
 
+// --- FIXED DELETE LOGIC ---
+function openDeleteModal(id, content) {
+    deletingTaskId = id;
+    const nameEl = document.getElementById('del-task-name');
+    if(nameEl) nameEl.innerText = content;
+    
+    const modal = document.getElementById('delete-modal');
+    if(modal) {
+        modal.classList.add('active');
+        const oldBtn = document.getElementById('btn-confirm-delete');
+        const newBtn = oldBtn.cloneNode(true);
+        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+        newBtn.onclick = function() { performDelete(deletingTaskId); };
+    } else {
+        if(confirm("Delete this habit? History will be lost.")) performDelete(id);
+    }
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('delete-modal');
+    if(modal) modal.classList.remove('active');
+    deletingTaskId = null;
+}
+
+function handleDeleteClick(event, id) {
+    event.stopPropagation();
+    event.preventDefault(); 
+    const row = document.getElementById(`task-${id}`);
+    let content = "Task";
+    if (row.querySelector('.task-content')) content = row.querySelector('.task-content').innerText;
+    else if (row.querySelector('.task-title')) content = row.querySelector('.task-title').innerText;
+
+    const isHabit = row.querySelector('.task-info')?.getAttribute('data-ishabit') === 'true';
+
+    if (isHabit) openDeleteModal(id, content);
+    else performDelete(id);
+}
+
+function performDelete(id) {
+    closeDeleteModal(); 
+    const row = document.getElementById(`task-${id}`);
+    lastActionTime = Date.now();
+    if(row) row.classList.add('deleting');
+    fetch(`/api/tasks/${id}/delete`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => { if(data.success) { if(row) row.remove(); syncDataVersion(); loadCharts(); } });
+}
+
+// --- 3. TASK ACTIONS ---
 function editTask(element) {
     editingTaskId = element.getAttribute('data-id');
     document.getElementById('m-content').value = element.getAttribute('data-content');
@@ -119,8 +145,7 @@ function editTask(element) {
     document.getElementById('m-category').value = element.getAttribute('data-category');
     document.getElementById('m-is-habit').checked = element.getAttribute('data-ishabit') === 'true';
     const dateVal = element.getAttribute('data-date');
-    if(dateVal && dateVal !== 'None') { document.getElementById('m-date').value = dateVal.split(' ')[0]; } 
-    else { document.getElementById('m-date').value = ''; }
+    document.getElementById('m-date').value = (dateVal && dateVal !== 'None') ? dateVal.split(' ')[0] : '';
     openModal(true);
 }
 
@@ -132,9 +157,8 @@ function submitTaskForm() {
     const recurrence = document.getElementById('m-recurrence').value;
     const category = document.getElementById('m-category').value;
     const is_habit = document.getElementById('m-is-habit').checked;
-    if(!content) return;
     
-    // Mark action to prevent auto-reload
+    if(!content) return;
     lastActionTime = Date.now();
 
     const payload = { content, priority, date, color, recurrence, category, is_habit };
@@ -145,90 +169,17 @@ function submitTaskForm() {
 }
 
 function createTaskAPI(content, priority, date, color, category = 'general') {
-    // Mark action to prevent auto-reload
     lastActionTime = Date.now();
-    
     fetch('/api/tasks/add', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ content, priority, date, color, category })
-    }).then(res => res.json()).then(data => { 
-        if(data.success) {
-            location.reload();
-        }
-    });
-}
-
-// --- 3. FILTERING ---
-function filterTasks(category, btnElement) {
-    document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
-    btnElement.classList.add('active');
-    const quickSelect = document.getElementById('quick-category');
-    if (quickSelect) quickSelect.value = (category === 'all') ? 'general' : category;
-
-    const rows = document.querySelectorAll('.task-row');
-    rows.forEach(row => {
-        const rowCat = row.getAttribute('data-category');
-        const isCompleted = row.classList.contains('completed');
-        let shouldShow = false;
-
-        if (category === 'all') {
-            if (!isCompleted) shouldShow = true;
-            else if (rowCat === 'general' || rowCat === 'None' || !rowCat) shouldShow = true;
-        } else {
-            shouldShow = (rowCat === category);
-        }
-        row.style.display = shouldShow ? 'flex' : 'none';
-    });
-}
-
-// --- 4. ACTIONS (Delete & Toggle) ---
-function handleDeleteClick(event, id) {
-    event.stopPropagation();
-    const row = document.getElementById(`task-${id}`);
-    const btn = event.currentTarget;
-    
-    const isHabit = row.querySelector('.task-info')?.getAttribute('data-ishabit') === 'true';
-    const isCompleted = row.classList.contains('completed');
-    const requiresConfirmation = isHabit || !isCompleted;
-
-    if (requiresConfirmation) {
-        if (!row.classList.contains('confirm-delete-mode')) {
-            row.classList.add('confirm-delete-mode'); 
-            const icon = btn.querySelector('i');
-            if(icon) icon.className = "fas fa-exclamation-triangle"; 
-            setTimeout(() => {
-                row.classList.remove('confirm-delete-mode');
-                if(icon) icon.className = "fas fa-trash-alt";
-            }, 2000);
-            return; 
-        }
-    }
-
-    // Set flag
-    lastActionTime = Date.now();
-    
-    row.classList.add('deleting');
-    setTimeout(() => {
-        fetch(`/api/tasks/${id}/delete`, { method: 'DELETE' })
-            .then(res => res.json())
-            .then(data => { 
-                if(data.success) { 
-                    row.remove(); 
-                    syncDataVersion(); 
-                    loadCharts(); 
-                } 
-            });
-    }, 500);
+    }).then(res => res.json()).then(data => { if(data.success) location.reload(); });
 }
 
 function toggleTask(id) {
     if(event) event.stopPropagation(); 
     const row = document.getElementById(`task-${id}`);
-    
-    // Set flag to block reload
     lastActionTime = Date.now();
-
     row.classList.add('animating-out');
 
     fetch(`/api/tasks/${id}/toggle`, { method: 'POST' })
@@ -237,271 +188,228 @@ function toggleTask(id) {
             setTimeout(() => {
                 const btn = document.getElementById(`btn-check-${id}`);
                 const taskList = document.getElementById('task-list');
-
                 row.classList.remove('animating-out');
 
                 if (data.new_state) {
                     row.classList.add('completed');
                     btn.innerHTML = '<i class="fas fa-check"></i>';
                     taskList.appendChild(row); 
-                    
-                    const activeCat = document.querySelector('.cat-pill.active').innerText.trim().toLowerCase();
-                    const rowCat = row.getAttribute('data-category');
-                    if(activeCat === 'all' && rowCat !== 'general') row.style.display = 'none';
                 } else {
                     row.classList.remove('completed');
                     btn.innerHTML = '';
                     taskList.prepend(row); 
                     row.style.display = 'flex'; 
                 }
-
-                if (data.new_date_label) {
-                    const metaSpan = row.querySelector('.task-meta');
-                    if (metaSpan) {
-                        const prio = data.priority.charAt(0).toUpperCase() + data.priority.slice(1);
-                        let html = `${prio} • `;
-                        if (data.new_date_label.includes('overdue')) {
-                            html += `<span style="color: var(--danger-red); font-weight: bold">${data.new_date_label}</span>`;
-                        } else if (data.new_date_label === 'Today') {
-                            html += `<span style="color: var(--accent-blue); font-weight: bold">Today</span>`;
-                        } else {
-                            html += data.new_date_label;
-                        }
-                        html += ` • <i class="fas fa-sync-alt" title="Repeats"></i>`;
-                        metaSpan.innerHTML = html;
-                    }
-                }
-
-                // Smooth Re-entry
-                requestAnimationFrame(() => {
-                    row.classList.add('animating-in');
-                    setTimeout(() => {
-                        row.classList.remove('animating-in');
-                    }, 400);
-                });
-
+                
                 syncDataVersion(); 
-                loadCharts(); 
+                loadCharts(true); 
 
             }, 300);
     });
 }
 
-// --- 5. CHART ENGINE (Smart Empty State + Stacked Heatmap) ---
-function loadCharts() {
-    console.log("📊 Loading Charts...");
+function filterTasks(category, btnElement) {
+    document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+    btnElement.classList.add('active');
+    document.querySelectorAll('.task-row').forEach(row => {
+        const rowCat = row.getAttribute('data-category');
+        const isCompleted = row.classList.contains('completed');
+        let shouldShow = (category === 'all') ? (!isCompleted || rowCat === 'general' || !rowCat) : (rowCat === category);
+        row.style.display = shouldShow ? 'flex' : 'none';
+    });
+}
 
-    fetch('/api/stats/charts')
-        .then(res => res.json())
-        .then(data => {
-            // --- A. RADIAL PROGRESS BARS ---
-            const radialContainer = document.getElementById('radial-chart'); 
-            if (radialContainer) {
-                // Check if we can update instead of rebuild
-                const existingItems = radialContainer.querySelectorAll('.radial-item');
-                const shouldRebuild = existingItems.length === 0 || existingItems.length !== data.radial.length;
+// --- 4. CHART ENGINE ---
+function loadCharts(softUpdate = false) {
+    if (!softUpdate) console.log("📊 Loading Charts...");
+    
+    fetch('/api/stats/charts').then(res => res.json()).then(data => {
+        // --- A. RADIAL CHARTS ---
+        const radialContainer = document.getElementById('radial-chart'); 
+        if (radialContainer) {
+            const existingItems = radialContainer.querySelectorAll('.radial-item');
+            if (!softUpdate || existingItems.length !== data.radial.length) {
+                radialContainer.innerHTML = ''; 
+                radialContainer.style.cssText = "display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%;";
+                
+                data.radial.forEach((percent, index) => {
+                    const label = data.radial_labels[index];
+                    const strokeColor = getColor(index);
+                    const circumference = 220; 
+                    let offset = percent !== null ? circumference - (percent / 100) * circumference : circumference;
+                    let textValue = percent !== null ? percent + '%' : '-';
+                    let textColor = percent !== null ? 'white' : '#555';
 
-                if (!shouldRebuild) {
-                    // SMOOTH UPDATE MODE
-                    data.radial.forEach((percent, index) => {
-                        const item = existingItems[index];
-                        const circle = item.querySelector('.progress-ring__circle');
-                        const text = item.querySelector('.radial-text');
-                        
-                        // EMPTY STATE LOGIC
-                        if (percent === null) {
-                            circle.style.strokeDashoffset = 220; // Full circumference (empty)
-                            circle.style.stroke = '#333';        // Grey
-                            text.innerText = '-';
-                            text.style.color = '#555';
-                        } else {
-                            const circumference = 220;
-                            const offset = circumference - (percent / 100) * circumference;
-                            circle.style.strokeDashoffset = offset;
-                            circle.style.stroke = getColor(index);
-                            text.innerText = percent + '%';
-                            text.style.color = 'white';
-                        }
-                    });
-                } else {
-                    // BUILD MODE
-                    radialContainer.innerHTML = ''; 
-                    radialContainer.style.display = 'flex';
-                    radialContainer.style.gap = '20px';
-                    radialContainer.style.flexWrap = 'wrap';
-                    
-                    data.radial.forEach((percent, index) => {
-                        const label = data.radial_labels[index];
-                        const circumference = 220; 
-                        
-                        // Default to Empty
-                        let offset = circumference;
-                        let strokeColor = '#333';
-                        let textValue = '-';
-                        let textColor = '#555';
-
-                        if (percent !== null) {
-                            offset = circumference - (percent / 100) * circumference;
-                            strokeColor = getColor(index);
-                            textValue = percent + '%';
-                            textColor = 'white';
-                        }
-                        
-                        const html = `
-                            <div class="radial-item" style="position: relative; width: 80px; display: flex; flex-direction: column; align-items: center;">
-                                <div style="position: relative; width: 80px; height: 80px;">
-                                    <svg class="progress-ring" width="80" height="80">
-                                        <circle class="progress-ring__circle-bg" stroke="#333" stroke-width="8" fill="transparent" r="35" cx="40" cy="40"/>
-                                        <circle class="progress-ring__circle" stroke="${strokeColor}" stroke-width="8" fill="transparent" r="35" cx="40" cy="40"
-                                            style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${circumference}; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 1s ease-out, stroke 0.5s;"/>
-                                    </svg>
-                                    <div class="radial-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: ${textColor};">${textValue}</div>
-                                </div>
-                                <div class="radial-label" style="font-size: 12px; color: #888; margin-top: 5px; text-align: center;">${label}</div>
-                            </div>`;
-                        radialContainer.innerHTML += html;
-
-                        // Trigger Animation
-                        setTimeout(() => {
-                            if (percent !== null) {
-                                const newItem = radialContainer.children[index];
-                                newItem.querySelector('.progress-ring__circle').style.strokeDashoffset = offset;
-                            }
-                        }, 100);
-                    });
-                }
+                    const html = `
+                        <div class="radial-item" style="position: relative; width: 80px; display: flex; flex-direction: column; align-items: center; margin-bottom: 10px;">
+                            <div style="position: relative; width: 80px; height: 80px;">
+                                <svg class="progress-ring" width="80" height="80">
+                                    <circle stroke="#333" stroke-width="8" fill="transparent" r="35" cx="40" cy="40"/>
+                                    <circle class="progress-ring__circle" stroke="${strokeColor}" stroke-width="8" fill="transparent" r="35" cx="40" cy="40"
+                                        style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${circumference}; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 1s ease-out;"/>
+                                </svg>
+                                <div class="radial-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: ${textColor};">${textValue}</div>
+                            </div>
+                            <div class="radial-label" style="font-size: 12px; color: #888; margin-top: 5px; text-align: center;">${label}</div>
+                        </div>`;
+                    radialContainer.innerHTML += html;
+                    setTimeout(() => { 
+                        if(radialContainer.children[index])
+                            radialContainer.children[index].querySelector('.progress-ring__circle').style.strokeDashoffset = offset; 
+                    }, 50);
+                });
+            } else {
+                data.radial.forEach((percent, index) => {
+                    const item = existingItems[index];
+                    const circle = item.querySelector('.progress-ring__circle');
+                    const text = item.querySelector('.radial-text');
+                    const circumference = 220;
+                    if (percent === null) {
+                        circle.style.strokeDashoffset = circumference;
+                        text.innerText = '-'; text.style.color = '#555';
+                    } else {
+                        circle.style.strokeDashoffset = circumference - (percent / 100) * circumference;
+                        text.innerText = percent + '%'; text.style.color = 'white';
+                    }
+                });
             }
+        }
 
-            // --- B. HEATMAP (Stacked & Time Travel Protected) ---
-            const heatmapContainer = document.getElementById('habit-heatmap');
-            if (heatmapContainer) {
+        // --- B. HEATMAP (Current Month + Animations) ---
+        const heatmapContainer = document.getElementById('habit-heatmap');
+        if (heatmapContainer) {
+            const currentRows = heatmapContainer.querySelectorAll('.habit-row');
+            if (!softUpdate || currentRows.length !== data.heatmap.length) {
                 heatmapContainer.innerHTML = ''; 
-
-                const today = new Date();
-                const todayStr = today.getFullYear() + '-' + 
-                                String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-                                String(today.getDate()).padStart(2, '0');
-
+                
                 if (data.heatmap && data.heatmap.length > 0) {
                     data.heatmap.forEach(habit => {
                         const habitWrapper = document.createElement('div');
+                        habitWrapper.className = 'habit-row';
+                        habitWrapper.setAttribute('id', `habit-row-${habit.id}`);
                         habitWrapper.style.marginBottom = '20px';
-
+                        
                         const titleDiv = document.createElement('div');
-                        titleDiv.style.color = habit.color;
-                        titleDiv.style.fontWeight = 'bold';
-                        titleDiv.style.fontSize = '0.9rem';
-                        titleDiv.style.marginBottom = '8px';
-                        titleDiv.innerText = habit.name; 
+                        titleDiv.style.cssText = `color:${habit.color}; font-weight:bold; font-size:0.9rem; margin-bottom:8px;`;
+                        titleDiv.innerText = habit.name;
                         habitWrapper.appendChild(titleDiv);
 
                         const rowDiv = document.createElement('div');
-                        rowDiv.style.display = 'flex';
-                        rowDiv.style.gap = '5px';
-                        rowDiv.style.flexWrap = 'wrap';
+                        rowDiv.style.cssText = 'display:flex; gap:5px; flex-wrap:wrap;';
 
                         habit.data.forEach((day, i) => {
                             const dot = document.createElement('div');
-                            dot.className = 'habit-dot'; 
-                            // Use pure day number for tooltip (e.g. "16")
-                            dot.setAttribute('data-date', day.real_date.split('-')[2]); 
+                            dot.className = 'habit-dot animate-in'; // ADDING ANIMATION CLASS HERE
+                            
+                            // Stagger Animation Delay (Wave Effect)
+                            dot.style.animationDelay = `${i * 0.03}s`;
+
+                            const dayNum = day.real_date.split('-')[2];
+                            dot.setAttribute('data-date', dayNum); 
 
                             dot.style.width = '16px'; 
-                            dot.style.height = '16px';
+                            dot.style.height = '16px'; 
                             dot.style.borderRadius = '50%'; 
-                            dot.style.transition = 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'; 
+                            dot.style.transition = 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
                             
-                            dot.style.opacity = '0';
-                            dot.style.animation = `fadeIn 0.5s ease forwards ${i * 0.03}s`;
-
-                            if (day.real_date > todayStr) {
-                                // FUTURE: Locked
+                            // Check if Future
+                            if (day.is_future) {
+                                dot.style.border = '2px dashed rgba(255,255,255,0.05)';
                                 dot.style.backgroundColor = 'transparent';
-                                dot.style.border = '2px dashed rgba(255,255,255,0.1)';
-                                dot.style.cursor = 'not-allowed';
+                                dot.style.cursor = 'default';
+                                dot.title = "Future date";
                             } else {
-                                // PAST/TODAY: Active
                                 dot.style.backgroundColor = day.y > 0 ? day.fillColor : 'rgba(255,255,255,0.1)';
                                 dot.style.cursor = 'pointer';
-                                dot.onclick = function() {
-                                    handleDotClick(this, habit.id, day.real_date, habit.color);
-                                };
+                                dot.onclick = function() { handleDotClick(this, habit.id, day.real_date, habit.color); };
                             }
                             rowDiv.appendChild(dot);
                         });
-                        
                         habitWrapper.appendChild(rowDiv);
                         heatmapContainer.appendChild(habitWrapper);
                     });
                 } else {
                     heatmapContainer.innerHTML = '<div style="color:#555; font-style:italic;">No habits tracked yet.</div>';
                 }
+            } else {
+                // SOFT UPDATE (Singular Animation)
+                data.heatmap.forEach((habit) => {
+                    const row = document.getElementById(`habit-row-${habit.id}`);
+                    if(row) {
+                        const dots = row.querySelectorAll('.habit-dot');
+                        habit.data.forEach((day, dIndex) => {
+                            const dot = dots[dIndex];
+                            // Update color only if not animating and not future
+                            if(dot && !dot.classList.contains('confirming') && !dot.classList.contains('processing') && !day.is_future) {
+                                const newColor = day.y > 0 ? day.fillColor : 'rgba(255,255,255,0.1)';
+                                dot.style.backgroundColor = newColor;
+                            }
+                        });
+                    }
+                });
             }
-        })
-        .catch(err => console.error("🔥 Chart Error:", err));
+        }
+    }).catch(err => console.error("🔥 Chart Error:", err));
 }
 
-function getColor(index) {
-    const colors = ['#3b5bdb', '#2ecc71', '#f1c40f', '#e74c3c', '#9b59b6'];
-    return colors[index % colors.length];
-}
+function getColor(index) { return ['#3b5bdb', '#2ecc71', '#f1c40f', '#e74c3c', '#9b59b6'][index % 5]; }
 
-// --- 6. HABIT DOT CLICK ---
+// --- 5. HABIT ANIMATION (Double-Tap) ---
 function handleDotClick(dotElement, taskId, dateStr, taskColor) {
-    if (document.querySelector('.confirming') && !dotElement.classList.contains('confirming')) return;
+    if (dotElement.classList.contains('processing')) return;
 
+    // STEP 1: DIM (Confirmation)
     if (!dotElement.classList.contains('confirming')) {
-        // CLICK 1: DIM COLOR
         dotElement.classList.add('confirming');
-        dotElement.style.backgroundColor = taskColor; 
-        dotElement.style.opacity = '0.5'; 
-        dotElement.style.transform = 'scale(0.9)';
-        
+        dotElement.style.transform = 'scale(0.8)';
+        dotElement.style.opacity = '0.5';
+        dotElement.style.border = `2px solid ${taskColor}`;
+        dotElement.style.backgroundColor = 'transparent';
+
         dotElement.dataset.timer = setTimeout(() => {
             dotElement.classList.remove('confirming');
-            dotElement.style.backgroundColor = 'rgba(255,255,255,0.1)'; 
-            dotElement.style.opacity = '1';
             dotElement.style.transform = 'scale(1)';
-        }, 3000);
-        
-    } else {
-        // CLICK 2: CONFIRM
-        clearTimeout(dotElement.dataset.timer);
-        dotElement.classList.remove('confirming');
-        
-        lastActionTime = Date.now(); // Block reload
-
-        dotElement.style.opacity = '1';
-        dotElement.style.transform = 'scale(1.2)';
-        dotElement.style.boxShadow = `0 0 10px ${taskColor}`;
-        dotElement.style.backgroundColor = taskColor;
-        
-        dotElement.onclick = null;
-        dotElement.style.cursor = 'default';
-        
-        fetch(`/api/tasks/${taskId}/history/add`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ date: dateStr })
-        }).then(res => res.json()).then(data => {
-            if(data.success) {
-                setTimeout(() => { 
-                    dotElement.style.transform = 'scale(1)'; 
-                    syncDataVersion(); 
-                    loadCharts(); 
-                }, 300);
-            } else {
+            dotElement.style.opacity = '1';
+            dotElement.style.border = 'none';
+            if (dotElement.style.backgroundColor === 'transparent') {
                 dotElement.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                dotElement.style.boxShadow = 'none';
-                dotElement.style.transform = 'scale(1)';
             }
-        });
+        }, 3000); 
+        return; 
     }
+
+    // STEP 2: CONFIRMED
+    clearTimeout(dotElement.dataset.timer);
+    dotElement.classList.remove('confirming');
+    dotElement.classList.add('processing');
+    lastActionTime = Date.now();
+
+    // Expansion Animation
+    dotElement.style.transition = 'all 0.4s ease';
+    dotElement.style.transform = 'scale(1.4)';
+    dotElement.style.backgroundColor = taskColor;
+    dotElement.style.opacity = '1';
+    dotElement.style.border = 'none';
+    dotElement.style.boxShadow = `0 0 15px ${taskColor}`;
+
+    fetch(`/api/tasks/${taskId}/history/add`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ date: dateStr })
+    }).then(res => res.json()).then(data => {
+        setTimeout(() => { 
+            dotElement.style.transform = 'scale(1)'; 
+            dotElement.style.boxShadow = 'none';
+            dotElement.classList.remove('processing');
+            syncDataVersion(); 
+            loadCharts(true); 
+        }, 400); 
+    });
 }
 
 // --- INIT ---
 document.addEventListener('DOMContentLoaded', () => {
-    loadCharts();
+    loadCharts(); 
     const modal = document.getElementById('task-modal');
     if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    const delModal = document.getElementById('delete-modal');
+    if (delModal) delModal.addEventListener('click', (e) => { if (e.target === delModal) closeDeleteModal(); });
 });

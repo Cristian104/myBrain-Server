@@ -1243,3 +1243,123 @@ h1 {
 #task-list {
     overflow: hidden; 
 }
+
+/* --- DANGER MODAL (Red & Scary) --- */
+.modal-card.delete-mode {
+    background: #1e1e1e;
+    border: 1px solid #444;
+    box-shadow: 0 0 0 100vmax rgba(0,0,0,0.85); /* Dims the entire screen nicely */
+}
+
+.modal-card.delete-mode .modal-header {
+    background: linear-gradient(90deg, rgba(231, 76, 60, 0.2), transparent);
+    border-bottom: 1px solid #e74c3c;
+    color: #e74c3c;
+}
+
+.modal-card.delete-mode h3 i {
+    margin-right: 10px;
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.btn-danger-confirm {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-danger-confirm:hover {
+    background: #c0392b;
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.4);
+    transform: translateY(-1px);
+}
+
+.warning-text {
+    background: rgba(231, 76, 60, 0.1);
+    color: #ffcccc;
+    padding: 10px;
+    border-radius: 4px;
+    border-left: 3px solid #e74c3c;
+    margin: 15px 0;
+    font-size: 0.9em;
+}
+
+/* --- FIX RADIAL CHARTS LAYOUT --- */
+/* Forces the container to wrap items if they don't fit, creating the 3-top 2-bottom look */
+#radial-chart {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+}
+
+/* --- ANIMATIONS FOR BULLETS --- */
+@keyframes popIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.habit-dot.animate-in {
+    opacity: 0; /* Hidden initially */
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* --- ANIMATIONS FOR BULLETS --- */
+@keyframes popIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.habit-dot.animate-in {
+    opacity: 0; /* Hidden initially */
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* --- ANIMATIONS FOR BULLETS --- */
+@keyframes popIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.habit-dot.animate-in {
+    opacity: 0; /* Hidden initially */
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}

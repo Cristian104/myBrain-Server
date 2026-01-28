@@ -9,7 +9,10 @@ login_manager = LoginManager()
 
 def create_app():
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = 'dev-secret-key'
+
+    # 👇 PASTE YOUR GENERATED SECRET KEY HERE
+    # Example: app.config['SECRET_KEY'] = '7a9c1b2d...'
+    app.config['SECRET_KEY'] = 'f28df1df3969656a76704e28b9dbaa75e93dabc80853267c8e6c0e9ddd6c415a'
 
     # 1. Construct the absolute path
     # 'app.instance_path' is automatically set by Flask to /app/instance
@@ -48,5 +51,11 @@ def create_app():
 
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint)
+
+    # 👇 NEW: START THE SCHEDULER (Fixes the Daily Reset)
+    # We import it here to avoid circular imports
+    from .scheduler import start_scheduler
+    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        start_scheduler(app)
 
     return app

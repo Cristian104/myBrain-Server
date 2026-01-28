@@ -4,8 +4,9 @@ from datetime import datetime, timedelta, timezone, time
 from . import db
 from .models import Task, TaskHistory, User
 from .telegram_bot import send_telegram_message, send_telegram_photo
-from PIL import Image, ImageDraw  # Requires: pip install Pillow
+from PIL import Image, ImageDraw
 import io
+import atexit
 
 # ... (Keep generate_habit_image as is) ...
 
@@ -50,87 +51,85 @@ def generate_habit_image(user_id, app):
         buf.seek(0)
         return buf
 
-# --- NOTIFICATION LOGIC ---
+# --- UPDATED: DAILY RESET LOGIC ---
+
+
+def reset_daily_tasks(app):
+    """Runs at 00:01 AM: Unchecks daily tasks AND moves their due date to Today."""
+    with app.app_context():
+        print("⏰ Scheduler: Checking for daily tasks to reset...")
+        # Find all daily tasks (whether done or not, we ensure they are ready for the new day)
+        daily_tasks = Task.query.filter_by(recurrence='daily').all()
+        count = 0
+        today = datetime.now().date()
+
+        for task in daily_tasks:
+            # 1. Uncheck it
+            if task.complete:
+                task.complete = False
+                count += 1
+
+            # 2. IMPORTANT: Update Due Date to TODAY so it shows up in "Today" lists/Bot
+            # We preserve the original time if it exists, otherwise default to 00:00
+            if task.due_date:
+                original_time = task.due_date.time()
+                task.due_date = datetime.combine(today, original_time)
+            else:
+                task.due_date = datetime.combine(today, time.min)
+
+        if count > 0:
+            db.session.commit()
+            print(f"✅ Scheduler: Reset {count} daily tasks and updated dates.")
+        else:
+            print("💤 Scheduler: Daily tasks dates updated, no unchecking needed.")
+
+# --- (Keep Notification Logic exactly as is) ---
 
 
 def check_daily_notifications(app):
-    """Runs at 8:00 AM: Sends Today's & Overdue Tasks."""
     with app.app_context():
         user = User.query.get(1)
         if not user:
             return
-
         today = datetime.now(timezone.utc).date()
-
-        # 1. Query Tasks
         overdue = Task.query.filter(
-            Task.user_id == user.id,
-            Task.complete == False,
-            db.func.date(Task.due_date) < today
-        ).all()
-
+            Task.user_id == user.id, Task.complete == False, db.func.date(Task.due_date) < today).all()
         due_today = Task.query.filter(
-            Task.user_id == user.id,
-            Task.complete == False,
-            db.func.date(Task.due_date) == today
-        ).all()
+            Task.user_id == user.id, Task.complete == False, db.func.date(Task.due_date) == today).all()
 
-        # 2. LOGIC CHANGE: If empty, send a "Relax" message instead of silence
         if not overdue and not due_today:
             send_telegram_message(
                 "<b>☀️ Morning Briefing</b>\n\nNo tasks scheduled for today. Enjoy your freedom! 🏝️")
             return
 
-        # 3. Build Message (Normal Case)
         msg = "<b>☀️ Morning Briefing</b>\n\n"
-
         if overdue:
             msg += f"⚠️ <b>{len(overdue)} Overdue:</b>\n"
             for t in overdue:
                 msg += f"• {t.content}\n"
-
         if due_today:
             msg += f"\n📅 <b>{len(due_today)} For Today:</b>\n"
             for t in due_today:
                 msg += f"• {t.content}\n"
-
         send_telegram_message(msg)
 
 
 def check_daily_summary(app):
-    """Runs at 10 PM: Sends 'Achievements Today' + 'Plan for Tomorrow'."""
     with app.app_context():
         now_utc = datetime.now(timezone.utc)
         today = now_utc.date()
         tomorrow = today + timedelta(days=1)
-
-        # 1. ACHIEVED TODAY
-        completed = Task.query.filter(
-            Task.complete == True,
-            Task.last_completed >= now_utc.replace(
-                hour=0, minute=0, second=0, microsecond=0)
-        ).all()
-
-        # 2. PREPARE FOR TOMORROW (Fixed Logic)
-        # Check range to be safe (00:00:00 to 23:59:59)
+        completed = Task.query.filter(Task.complete == True, Task.last_completed >= now_utc.replace(
+            hour=0, minute=0, second=0, microsecond=0)).all()
         start_tomorrow = datetime.combine(tomorrow, time.min)
         end_tomorrow = datetime.combine(tomorrow, time.max)
-
-        upcoming = Task.query.filter(
-            Task.due_date >= start_tomorrow,
-            Task.due_date <= end_tomorrow,
-            # LOGIC FIX: Show if (Not Done) OR (Done AND Recurring)
-            db.or_(
-                Task.complete == False,
-                db.and_(Task.complete == True, Task.recurrence != 'none')
-            )
-        ).all()
+        upcoming = Task.query.filter(Task.due_date >= start_tomorrow, Task.due_date <= end_tomorrow, db.or_(
+            Task.complete == False, db.and_(Task.complete == True, Task.recurrence != 'none'))).all()
 
         if not completed and not upcoming:
             return
 
         msg = "<b>🌙 Daily Closing</b>\n\n"
-
         if completed:
             msg += f"<b>✅ Achieved Today ({len(completed)})</b>\n"
             for t in completed:
@@ -146,12 +145,10 @@ def check_daily_summary(app):
                 msg += f"{icon} {t.content}\n"
         else:
             msg += "<i>Nothing scheduled for tomorrow yet. Sleep well! 💤</i>"
-
         send_telegram_message(msg)
 
 
 def check_weekly_briefing(app):
-    """Runs Sunday Night: Sends Habit Graph."""
     with app.app_context():
         msg = "<b>📅 Weekly Briefing</b>\nHere is your habit consistency:"
         img_buffer = generate_habit_image(1, app)
@@ -160,13 +157,16 @@ def check_weekly_briefing(app):
         else:
             send_telegram_message(msg + "\n(No habits found to graph)")
 
-# --- SCHEDULER START ---
+# --- START SCHEDULER ---
 
 
 def start_scheduler(app):
     scheduler = BackgroundScheduler()
+    scheduler.add_job(lambda: reset_daily_tasks(app), 'cron', hour=0, minute=1)
     scheduler.add_job(lambda: check_daily_notifications(app), 'cron', hour=8)
     scheduler.add_job(lambda: check_daily_summary(app), 'cron', hour=22)
     scheduler.add_job(lambda: check_weekly_briefing(app),
                       'cron', day_of_week='sun', hour=20)
     scheduler.start()
+    print("🚀 Scheduler started: Daily Reset, Morning Brief, Night Summary, Weekly Graph active.")
+    atexit.register(lambda: scheduler.shutdown())
