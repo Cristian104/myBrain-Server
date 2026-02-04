@@ -5,19 +5,17 @@ from .models import Task, TaskHistory, User
 from datetime import datetime, date, timedelta
 import psutil
 from .scheduler import check_daily_notifications, check_daily_summary, check_weekly_briefing, reset_daily_tasks
-import calendar  # <--- NEW IMPORT
+import calendar # <--- NEW IMPORT
 
 main = Blueprint('main', __name__)
 
 # --- BASIC NAVIGATION ---
-
 
 @main.route('/')
 def index():
     if not current_user.is_authenticated:
         return redirect(url_for('auth.login'))
     return redirect(url_for('main.dashboard'))
-
 
 @main.route('/dashboard')
 @login_required
@@ -26,19 +24,17 @@ def dashboard():
     # 1. Fetch ALL tasks for user
     # 2. Filter: Show if (Not Complete) OR (Recurring) OR (Completed Today)
     # This hides one-time tasks completed yesterday or before.
-
-    all_tasks = Task.query.filter_by(user_id=current_user.id).order_by(
-        Task.complete, Task.due_date).all()
-
+    
+    all_tasks = Task.query.filter_by(user_id=current_user.id).order_by(Task.complete, Task.due_date).all()
+    
     visible_tasks = []
     today_start = datetime.combine(date.today(), datetime.min.time())
-
+    
     for t in all_tasks:
         if not t.complete:
             visible_tasks.append(t)
         elif t.recurrence != 'none':
-            # Recurring tasks stay visible (usually reset by scheduler, but just in case)
-            visible_tasks.append(t)
+            visible_tasks.append(t) # Recurring tasks stay visible (usually reset by scheduler, but just in case)
         else:
             # It's a completed one-time task. Only show if completed TODAY.
             if t.last_completed and t.last_completed >= today_start:
@@ -47,12 +43,10 @@ def dashboard():
 
     return render_template('main/dashboard.html', tasks=visible_tasks, now=datetime.now())
 
-
 @main.route('/settings')
 @login_required
 def settings():
     return render_template('main/settings.html')
-
 
 @main.route('/dev')
 @login_required
@@ -91,7 +85,6 @@ def add_task():
     db.session.commit()
     return jsonify({'success': True, 'id': new_task.id})
 
-
 @main.route('/api/tasks/<int:id>/toggle', methods=['POST'])
 @login_required
 def toggle_task(id):
@@ -109,8 +102,7 @@ def toggle_task(id):
             exists = TaskHistory.query.filter_by(
                 task_id=task.id, completed_date=today).first()
             if not exists:
-                history = TaskHistory(
-                    task_id=task.id, completed_date=today, user_id=current_user.id)
+                history = TaskHistory(task_id=task.id, completed_date=today, user_id=current_user.id)
                 db.session.add(history)
 
     db.session.commit()
@@ -133,7 +125,6 @@ def toggle_task(id):
         'new_date_label': new_date_label
     })
 
-
 @main.route('/api/tasks/<int:id>/delete', methods=['DELETE'])
 @login_required
 def delete_task(id):
@@ -144,7 +135,6 @@ def delete_task(id):
     db.session.delete(task)
     db.session.commit()
     return jsonify({'success': True})
-
 
 @main.route('/api/tasks/<int:id>/edit', methods=['POST'])
 @login_required
@@ -170,7 +160,6 @@ def edit_task(id):
     db.session.commit()
     return jsonify({'success': True})
 
-
 @main.route('/api/tasks/<int:id>/history/add', methods=['POST'])
 @login_required
 def add_history(id):
@@ -183,18 +172,15 @@ def add_history(id):
 
     if date_str:
         history_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        exists = TaskHistory.query.filter_by(
-            task_id=task.id, completed_date=history_date).first()
+        exists = TaskHistory.query.filter_by(task_id=task.id, completed_date=history_date).first()
 
         if not exists:
-            new_history = TaskHistory(
-                task_id=task.id, completed_date=history_date, user_id=current_user.id)
+            new_history = TaskHistory(task_id=task.id, completed_date=history_date, user_id=current_user.id)
             db.session.add(new_history)
             db.session.commit()
             return jsonify({'success': True})
 
     return jsonify({'success': False})
-
 
 @main.route('/api/stats')
 @login_required
@@ -202,17 +188,15 @@ def get_stats():
     cpu = psutil.cpu_percent(interval=None)
     ram = psutil.virtual_memory().percent
     disk = psutil.disk_usage('/').percent
-
+    
     # Versioning trick to auto-refresh UI when data changes
     task_count = Task.query.filter_by(user_id=current_user.id).count()
-    history_count = TaskHistory.query.filter_by(
-        user_id=current_user.id).count()
+    history_count = TaskHistory.query.filter_by(user_id=current_user.id).count()
     version = task_count + history_count
 
     return jsonify({'cpu': cpu, 'ram': ram, 'disk': disk, 'data_version': version})
 
 # --- UPDATED CHART DATA (Fixes Bullet Chart Range) ---
-
 
 @main.route('/api/stats/charts')
 @login_required
@@ -223,8 +207,7 @@ def stats_charts():
     radial_labels = [c.capitalize() for c in categories]
 
     for cat in categories:
-        cat_tasks = Task.query.filter_by(
-            user_id=current_user.id, category=cat).all()
+        cat_tasks = Task.query.filter_by(user_id=current_user.id, category=cat).all()
         total = len(cat_tasks)
         if total == 0:
             radial_values.append(None)
@@ -236,13 +219,13 @@ def stats_charts():
     # 2. Heatmap Data (UPDATED FOR CURRENT MONTH)
     habits = Task.query.filter_by(user_id=current_user.id, is_habit=True).all()
     heatmap_data = []
-
+    
     today = date.today()
     # Calculate First and Last day of Current Month
     first_day = today.replace(day=1)
     last_day_num = calendar.monthrange(today.year, today.month)[1]
     last_day = today.replace(day=last_day_num)
-
+    
     # Range: 1st to Last Day
     days_in_month = (last_day - first_day).days + 1
 
@@ -259,44 +242,39 @@ def stats_charts():
             TaskHistory.completed_date >= first_day,
             TaskHistory.completed_date <= last_day
         ).all()
-        completed_dates = {h.completed_date.strftime(
-            '%Y-%m-%d') for h in history}
+        completed_dates = {h.completed_date.strftime('%Y-%m-%d') for h in history}
 
         for i in range(days_in_month):
             d = first_day + timedelta(days=i)
             d_str = d.strftime('%Y-%m-%d')
             is_done = d_str in completed_dates
-
+            
             # Frontend needs to know if this date is in the future
             is_future = d > today
-
+            
             habit_obj['data'].append({
                 'x': i,
                 'y': 100 if is_done else 0,
                 'real_date': d_str,
                 'fillColor': habit.color,
-                'is_future': is_future  # Flag for dashboard.js
+                'is_future': is_future # Flag for dashboard.js
             })
         heatmap_data.append(habit_obj)
 
     return jsonify({'radial': radial_values, 'radial_labels': radial_labels, 'heatmap': heatmap_data})
 
 # --- DEV PANEL ROUTES (Keep your existing ones) ---
-
-
 @main.route('/api/trigger/daily', methods=['POST'])
 @login_required
 def dev_trigger_daily():
     check_daily_notifications(current_app)
     return jsonify({'success': True, 'message': 'Morning alert triggered!'})
 
-
 @main.route('/api/test/alert', methods=['POST'])
 @login_required
 def dev_test_alert():
-    check_daily_notifications(current_app)
+    check_daily_notifications(current_app) 
     return jsonify({'success': True, 'message': 'Urgent alert simulation sent!'})
-
 
 @main.route('/api/trigger/summary', methods=['POST'])
 @login_required
@@ -304,13 +282,11 @@ def dev_trigger_summary():
     check_daily_summary(current_app)
     return jsonify({'success': True, 'message': 'Night summary triggered!'})
 
-
 @main.route('/api/trigger/weekly', methods=['POST'])
 @login_required
 def dev_trigger_weekly():
     check_weekly_briefing(current_app)
     return jsonify({'success': True, 'message': 'Weekly briefing triggered!'})
-
 
 @main.route('/api/test/seed', methods=['POST'])
 @login_required
@@ -325,20 +301,16 @@ def dev_seed_data():
     for i in range(30):
         d = today - timedelta(days=i)
         # Don't seed future
-        if d > today:
-            continue
+        if d > today: continue
         for t in tasks:
-            if random.random() > 0.5:
-                exists = TaskHistory.query.filter_by(
-                    task_id=t.id, completed_date=d).first()
+            if random.random() > 0.5: 
+                exists = TaskHistory.query.filter_by(task_id=t.id, completed_date=d).first()
                 if not exists:
-                    h = TaskHistory(task_id=t.id, completed_date=d,
-                                    user_id=current_user.id)
+                    h = TaskHistory(task_id=t.id, completed_date=d, user_id=current_user.id)
                     db.session.add(h)
                     added_count += 1
     db.session.commit()
     return jsonify({'success': True, 'message': f'Seeded {added_count} history entries.'})
-
 
 @main.route('/api/test/midnight', methods=['POST'])
 @login_required

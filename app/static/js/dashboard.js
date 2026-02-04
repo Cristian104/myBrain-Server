@@ -275,7 +275,7 @@ function loadCharts(softUpdate = false) {
             }
         }
 
-        // --- B. HEATMAP (Current Month + Animations) ---
+        // --- B. HEATMAP (Fixed "Egg" Shape) ---
         const heatmapContainer = document.getElementById('habit-heatmap');
         if (heatmapContainer) {
             const currentRows = heatmapContainer.querySelectorAll('.habit-row');
@@ -299,18 +299,23 @@ function loadCharts(softUpdate = false) {
 
                         habit.data.forEach((day, i) => {
                             const dot = document.createElement('div');
-                            dot.className = 'habit-dot animate-in'; // ADDING ANIMATION CLASS HERE
+                            dot.className = 'habit-dot animate-in'; 
                             
-                            // Stagger Animation Delay (Wave Effect)
                             dot.style.animationDelay = `${i * 0.03}s`;
 
                             const dayNum = day.real_date.split('-')[2];
                             dot.setAttribute('data-date', dayNum); 
 
-                            dot.style.width = '16px'; 
-                            dot.style.height = '16px'; 
-                            dot.style.borderRadius = '50%'; 
-                            dot.style.transition = 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                            // FIX: Added flex-shrink:0 and min-width/height to prevent squishing
+                            dot.style.cssText = `
+                                width:16px; 
+                                height:16px; 
+                                min-width:16px; 
+                                min-height:16px; 
+                                flex-shrink:0; 
+                                border-radius:50%; 
+                                transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                            `;
                             
                             // Check if Future
                             if (day.is_future) {
@@ -339,7 +344,6 @@ function loadCharts(softUpdate = false) {
                         const dots = row.querySelectorAll('.habit-dot');
                         habit.data.forEach((day, dIndex) => {
                             const dot = dots[dIndex];
-                            // Update color only if not animating and not future
                             if(dot && !dot.classList.contains('confirming') && !dot.classList.contains('processing') && !day.is_future) {
                                 const newColor = day.y > 0 ? day.fillColor : 'rgba(255,255,255,0.1)';
                                 dot.style.backgroundColor = newColor;
