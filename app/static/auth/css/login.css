@@ -1,0 +1,106 @@
+/* app/static/auth/css/login.css */
+
+/* --- LAYOUT --- */
+.split-screen {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+/* --- LEFT PANE (Fluid & Carousel) --- */
+.left-pane {
+    flex: 1.4;
+    position: relative;
+    background-color: var(--bg-dark-left);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none; 
+}
+
+#fluid-container {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 0;
+}
+
+#fluid-container canvas {
+    width: 100%; height: 100%; display: block; filter: blur(20px);
+}
+
+.left-pane .overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(to right, rgba(0,0,0,0.5), rgba(0,0,0,0.1));
+    z-index: 1; pointer-events: none;
+}
+
+/* --- CAROUSEL & QUOTES --- */
+.carousel-container {
+    position: relative; z-index: 2;
+    background-color: var(--card-bg);
+    padding: 40px 50px;
+    border-radius: 24px;
+    max-width: 550px; width: 80%;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    transition: height 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+    overflow: hidden;
+}
+
+/* 👇 THIS FIXES THE GIANT ICON 👇 */
+.quote-icon svg {
+    width: 32px;
+    height: 32px;
+    color: var(--accent-blue);
+    margin-bottom: 20px;
+    display: block; /* Ensures it respects dimensions */
+}
+
+.carousel-content {
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    opacity: 1; transform: translateY(0);
+}
+
+.quote-text { font-size: 1.4rem; line-height: 1.5; font-weight: 500; margin-bottom: 24px; min-height: 80px; }
+.quote-author { font-weight: 700; font-size: 1.1rem; color: var(--text-white); }
+.quote-author span { display: block; font-weight: 400; color: var(--text-gray); font-size: 0.9rem; margin-top: 4px; }
+
+.carousel-dots { margin-top: 30px; display: flex; gap: 6px; }
+.dot { height: 4px; width: 20px; background-color: rgba(255,255,255,0.2); border-radius: 2px; transition: 0.3s; }
+.dot.active { background-color: var(--accent-blue); width: 40px; }
+
+/* --- RIGHT PANE (Form) --- */
+.right-pane {
+    flex: 1;
+    background-color: var(--bg-dark-right);
+    display: flex; align-items: center; justify-content: center;
+    border-left: 1px solid rgba(255,255,255,0.05);
+}
+
+.login-box { width: 100%; max-width: 380px; padding: 20px; }
+.login-box h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
+.sub-header { color: var(--text-gray); margin-bottom: 40px; font-size: 0.9rem; }
+.sub-header a { color: var(--accent-blue); text-decoration: none; }
+
+.input-group { margin-bottom: 20px; }
+.input-group label { display: block; color: var(--text-gray); font-size: 0.8rem; margin-bottom: 8px; }
+.input-group input {
+    width: 100%; padding: 12px 16px;
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    color: var(--text-white); outline: none; transition: 0.2s;
+}
+.input-group input:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.1); }
+
+.footer-link { text-align: center; color: var(--text-gray); font-size: 0.85rem; margin-top: 24px; }
+.footer-link a { color: var(--accent-blue); text-decoration: none; }
+
+.flash-error {
+    color: #ff6b6b; background: rgba(255,107,107,0.1);
+    padding: 10px; border-radius: 6px; margin-top: 15px;
+    font-size: 0.9rem; text-align: center;
+}

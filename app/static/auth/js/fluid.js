@@ -44,8 +44,8 @@ function init() {
 
     // --- Load Shaders and Create Material ---
     Promise.all([
-        fetch('/static/shaders/fluid.vert').then(r => r.text()),
-        fetch('/static/shaders/fluid.frag').then(r => r.text())
+        fetch('/static/auth/shaders/fluid.vert').then(r => r.text()),
+        fetch('/static/auth/shaders/fluid.frag').then(r => r.text())
     ]).then(([vert, frag]) => {
         fluidMaterial = new THREE.ShaderMaterial({
             vertexShader: vert,

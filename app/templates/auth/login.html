@@ -8,9 +8,24 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}"
+      href="{{ url_for('static', filename='global/css/base.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='global/css/components.css') }}"
+    />
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='auth/css/login.css') }}"
+    />
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='mobile/css/login.css') }}"
     />
   </head>
   <body>
@@ -62,7 +77,6 @@
                 type="text"
                 id="username"
                 name="username"
-                value=""
                 required
                 autocomplete="off"
               />
@@ -70,13 +84,7 @@
 
             <div class="input-group">
               <label for="password">Password</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value=""
-                required
-              />
+              <input type="password" id="password" name="password" required />
             </div>
 
             <button type="submit" class="btn-primary">Login</button>
@@ -93,7 +101,7 @@
       </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+    <script src="{{ url_for('static', filename='auth/js/login.js') }}"></script>
 
     <script type="importmap">
       {
@@ -105,7 +113,7 @@
 
     <script
       type="module"
-      src="{{ url_for('static', filename='js/fluid.js') }}"
+      src="{{ url_for('static', filename='auth/js/fluid.js') }}"
     ></script>
   </body>
 </html>

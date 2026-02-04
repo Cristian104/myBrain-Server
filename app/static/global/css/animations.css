@@ -1,0 +1,46 @@
+/* app/static/global/css/animations.css */
+
+/* 1. Pop In (for Habit Dots) */
+@keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* 2. Delete Swipe (For removing tasks) */
+@keyframes deleteSwipe {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+        max-height: 60px;
+        margin-bottom: 0; padding: 15px 0;
+    }
+    30% {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(30px);
+        max-height: 0;
+        padding: 0; margin: 0; border: none;
+    }
+}
+
+/* 3. Slide Up (For new tasks appearing) */
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 4. Pulse (For urgent alerts) */
+@keyframes pulse-red {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* --- UTILITY CLASSES --- */
+.animate-pop { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+.animate-delete { animation: deleteSwipe 0.3s forwards ease-in-out; pointer-events: none; }
+.animate-slide-up { animation: slideUpFade 0.4s ease forwards; }

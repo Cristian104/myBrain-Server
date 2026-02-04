@@ -17,26 +17,32 @@
 
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}"
+      href="{{ url_for('static', filename='global/css/base.css') }}"
     />
     <link
       rel="stylesheet"
-      media="screen and (max-width: 768px)"
-      href="{{ url_for('static', filename='css/mobile.css') }}"
+      href="{{ url_for('static', filename='global/css/layout.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='global/css/components.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='global/css/animations.css') }}"
+    />
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='dashboard/css/dashboard.css') }}"
+    />
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='mobile/css/dashboard.css') }}"
     />
   </head>
   <body>
-    <a href="{{ url_for('dashboard.settings') }}" class="nav-item">
-      <i class="fas fa-cog"></i> <span>Settings</span>
-    </a>
-
-    <a
-      href="{{ url_for('dashboard.dev_panel') }}"
-      class="nav-item"
-      style="opacity: 0.5"
-    >
-      <i class="fas fa-terminal"></i> <span>Dev Panel</span>
-    </a>
     <div class="main-wrapper">
       <nav class="sidebar">
         <div class="logo-area">
@@ -45,26 +51,44 @@
         </div>
 
         <ul class="nav-links">
-          <li class="{{ 'active' if request.endpoint == 'main.dashboard' }}">
+          <li
+            class="{{ 'active' if request.endpoint == 'dashboard.dashboard_view' }}"
+          >
             <a href="{{ url_for('dashboard.dashboard_view') }}">
               <i class="fas fa-th-large"></i>
               <span class="link-text">Dashboard</span>
             </a>
           </li>
+
           <li>
             <a href="#">
               <i class="fas fa-tasks"></i>
               <span class="link-text">Tasks</span>
             </a>
           </li>
+
           <li>
             <a href="#">
               <i class="fas fa-server"></i>
               <span class="link-text">Server</span>
             </a>
           </li>
-          <li>
-            <a href="#">
+
+          {% if current_user.role == 'dev' %}
+          <li
+            class="{{ 'active' if request.endpoint == 'dashboard.dev_panel' }}"
+          >
+            <a href="{{ url_for('dashboard.dev_panel') }}">
+              <i class="fas fa-terminal"></i>
+              <span class="link-text">Dev Panel</span>
+            </a>
+          </li>
+          {% endif %}
+
+          <li
+            class="{{ 'active' if request.endpoint == 'dashboard.settings' }}"
+          >
+            <a href="{{ url_for('dashboard.settings') }}">
               <i class="fas fa-cog"></i>
               <span class="link-text">Settings</span>
             </a>
@@ -92,7 +116,8 @@
         {% endif %} {% endwith %} {% block content %}{% endblock %}
       </main>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='dashboard/js/dashboard.js') }}"></script>
   </body>
 </html>

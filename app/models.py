@@ -14,6 +14,7 @@ class User(UserMixin, db.Model):
     # Relationships
     tasks = db.relationship('Task', backref='user', lazy=True)
     habits = db.relationship('TaskHistory', backref='user', lazy=True)
+    role = db.Column(db.String(20), default='user')  # Options: 'user', 'dev'
 
 
 class Task(db.Model):

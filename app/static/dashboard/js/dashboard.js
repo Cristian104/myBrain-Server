@@ -1,18 +1,22 @@
-/* app/static/js/dashboard.js */
+/* app/static/dashboard/js/dashboard.js */
 
 // --- GLOBAL VARIABLES ---
-let editingTaskId = null; 
-let deletingTaskId = null; 
-let statsInterval = null; 
-let currentDataVersion = null; 
-let lastActionTime = 0; 
+let editingTaskId = null;
+let deletingTaskId = null;
+let statsInterval = null;
+let currentDataVersion = null;
+let lastActionTime = 0;
+
+// Track Category Order for Slide Direction
+const categoryOrder = ['all', 'work', 'personal', 'dev', 'health'];
+let currentCategoryIndex = 0;
 
 // --- 1. SMART STATS POLLING ---
 function updateStats() {
     fetch('/api/stats')
         .then(res => res.json())
         .then(data => {
-            if(document.getElementById('cpu-text')) {
+            if (document.getElementById('cpu-text')) {
                 document.getElementById('cpu-text').innerText = data.cpu + '%';
                 document.getElementById('cpu-bar').style.width = data.cpu + '%';
                 document.getElementById('ram-text').innerText = data.ram + '%';
@@ -20,20 +24,16 @@ function updateStats() {
                 document.getElementById('disk-text').innerText = data.disk + '%';
                 document.getElementById('disk-bar').style.width = data.disk + '%';
             }
-
             if (currentDataVersion === null) {
                 currentDataVersion = data.data_version;
             } else if (data.data_version > currentDataVersion) {
                 if (Date.now() - lastActionTime < 5000) {
-                    console.log("♻️ Local update detected. Silently syncing version.");
-                    currentDataVersion = data.data_version;
+                    currentDataVersion = data.data_version; // Silent sync if active
                 } else {
-                    console.log("♻️ Remote change detected. Refreshing...");
-                    location.reload();
+                    location.reload(); // Refresh if idle
                 }
             }
-        })
-        .catch(console.error);
+        }).catch(console.error);
 }
 
 function syncDataVersion() {
@@ -48,24 +48,121 @@ function stopPolling() { if (statsInterval) { clearInterval(statsInterval); stat
 document.addEventListener("visibilitychange", () => { document.hidden ? stopPolling() : startPolling(); });
 startPolling();
 
-// --- 2. MODALS ---
+// --- 2. SMOOTH ANIMATIONS & FILTERING (THE FIX) ---
+
+function filterTasks(category, btnElement) {
+    const listContainer = document.getElementById('task-list');
+    
+    // 0. Ensure Animation Wrapper Exists
+    let wrapper = listContainer.parentElement;
+    if (!wrapper.classList.contains('smooth-height-wrapper')) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'smooth-height-wrapper';
+        listContainer.parentNode.insertBefore(wrapper, listContainer);
+        wrapper.appendChild(listContainer);
+    }
+
+    // 1. CAPTURE START HEIGHT (The "Jump" Fix)
+    // We lock the height to pixels BEFORE we change anything
+    const startHeight = wrapper.offsetHeight;
+    wrapper.style.height = startHeight + 'px';
+
+    // 2. Determine Slide Direction
+    const newIndex = categoryOrder.indexOf(category);
+    const direction = newIndex > currentCategoryIndex ? 'right' : 'left';
+    currentCategoryIndex = newIndex;
+
+    // 3. Update Pills UI
+    document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+    btnElement.classList.add('active');
+
+    const outClass = direction === 'right' ? 'anim-out-left' : 'anim-out-right';
+    const inClass = direction === 'right' ? 'anim-in-right' : 'anim-in-left';
+
+    // 4. ANIMATE OUT (Slide Away)
+    listContainer.classList.remove('anim-in-left', 'anim-in-right'); 
+    listContainer.classList.add(outClass);
+
+    setTimeout(() => {
+        // 5. CHANGE THE DOM (Hide/Show Rows)
+        document.querySelectorAll('.task-row').forEach(row => {
+            const rowCat = row.getAttribute('data-category');
+            const isCompleted = row.classList.contains('completed');
+            let shouldShow = (category === 'all') 
+                ? (!isCompleted || rowCat === 'general' || !rowCat) 
+                : (rowCat === category);
+            row.style.display = shouldShow ? 'flex' : 'none';
+        });
+
+        // 6. ANIMATE HEIGHT (Smooth Resize)
+        // A. Release height constraint to measure the NEW size
+        wrapper.style.height = 'auto';
+        const targetHeight = wrapper.offsetHeight;
+        
+        // B. Snap back to OLD size instantly
+        wrapper.style.height = startHeight + 'px';
+        
+        // C. Force Browser to Process (Reflow)
+        void wrapper.offsetHeight; 
+
+        // D. Animate to NEW size
+        wrapper.style.height = targetHeight + 'px';
+
+        // 7. ANIMATE IN (Slide Back)
+        listContainer.classList.remove(outClass);
+        listContainer.classList.add(inClass);
+
+        // 8. Cleanup (Unlock height after animation ends)
+        setTimeout(() => {
+            wrapper.style.height = 'auto';
+        }, 400); // 400ms matches CSS transition time
+
+    }, 200); // Wait for Slide Out to finish
+}
+
+// Helper to animate height for other actions (like Quick Add)
+function updateWrapperHeight(elementInside) {
+    const wrapper = elementInside.closest('.smooth-height-wrapper');
+    if(!wrapper) return;
+    
+    const startHeight = wrapper.offsetHeight;
+    wrapper.style.height = startHeight + 'px';
+    
+    // Allow DOM to update (e.g. Quick Add row appears)
+    requestAnimationFrame(() => {
+        wrapper.style.height = 'auto';
+        const targetHeight = wrapper.offsetHeight;
+        wrapper.style.height = startHeight + 'px';
+        void wrapper.offsetHeight;
+        wrapper.style.height = targetHeight + 'px';
+        setTimeout(() => wrapper.style.height = 'auto', 400);
+    });
+}
+
+// --- 3. MODALS ---
 function toggleQuickAdd() {
-    document.getElementById('quick-add-row').classList.toggle('active');
-    document.getElementById('quick-task-input').focus();
+    const row = document.getElementById('quick-add-row');
+    row.classList.toggle('active');
+    
+    if(row.classList.contains('active')) {
+        document.getElementById('quick-task-input').focus();
+    }
+    // Animate the opening
+    updateWrapperHeight(row);
 }
 
 function handleQuickEnter(e) {
-    if(e.key === 'Enter') {
+    if (e.key === 'Enter') {
         const content = e.target.value;
         const category = document.getElementById('quick-category')?.value || 'general';
-        if(content) {
+        if (content) {
             createTaskAPI(content, 'normal', null, '#3b5bdb', category);
             e.target.value = '';
         }
     }
 }
 
-function openModal(isEdit=false) {
+function openModal(isEdit = false) {
     const modal = document.getElementById('task-modal');
     const title = modal.querySelector('h3');
     const btn = modal.querySelector('.btn-save');
@@ -79,7 +176,7 @@ function openModal(isEdit=false) {
         document.getElementById('m-content').value = '';
         document.getElementById('m-date').value = '';
         document.getElementById('m-category').value = 'general';
-        document.getElementById('m-is-habit').checked = false; 
+        document.getElementById('m-is-habit').checked = false;
         editingTaskId = null;
     }
     modal.classList.add('active');
@@ -91,29 +188,29 @@ function selectColor(hex) { document.getElementById('m-color').value = hex; }
 function openDeleteModal(id, content) {
     deletingTaskId = id;
     const nameEl = document.getElementById('del-task-name');
-    if(nameEl) nameEl.innerText = content;
-    
+    if (nameEl) nameEl.innerText = content;
+
     const modal = document.getElementById('delete-modal');
-    if(modal) {
+    if (modal) {
         modal.classList.add('active');
         const oldBtn = document.getElementById('btn-confirm-delete');
         const newBtn = oldBtn.cloneNode(true);
         oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-        newBtn.onclick = function() { performDelete(deletingTaskId); };
+        newBtn.onclick = function () { performDelete(deletingTaskId); };
     } else {
-        if(confirm("Delete this habit? History will be lost.")) performDelete(id);
+        if (confirm("Delete this habit? History will be lost.")) performDelete(id);
     }
 }
 
 function closeDeleteModal() {
     const modal = document.getElementById('delete-modal');
-    if(modal) modal.classList.remove('active');
+    if (modal) modal.classList.remove('active');
     deletingTaskId = null;
 }
 
 function handleDeleteClick(event, id) {
     event.stopPropagation();
-    event.preventDefault(); 
+    event.preventDefault();
     const row = document.getElementById(`task-${id}`);
     let content = "Task";
     if (row.querySelector('.task-content')) content = row.querySelector('.task-content').innerText;
@@ -126,16 +223,20 @@ function handleDeleteClick(event, id) {
 }
 
 function performDelete(id) {
-    closeDeleteModal(); 
+    closeDeleteModal();
     const row = document.getElementById(`task-${id}`);
     lastActionTime = Date.now();
-    if(row) row.classList.add('deleting');
+    if (row) {
+        row.classList.add('deleting');
+        // Animate height adjustment on delete
+        setTimeout(() => updateWrapperHeight(row), 50);
+    }
     fetch(`/api/tasks/${id}/delete`, { method: 'DELETE' })
         .then(res => res.json())
-        .then(data => { if(data.success) { if(row) row.remove(); syncDataVersion(); loadCharts(); } });
+        .then(data => { if (data.success) { if (row) row.remove(); syncDataVersion(); loadCharts(); } });
 }
 
-// --- 3. TASK ACTIONS ---
+// --- 4. TASK ACTIONS ---
 function editTask(element) {
     editingTaskId = element.getAttribute('data-id');
     document.getElementById('m-content').value = element.getAttribute('data-content');
@@ -157,27 +258,27 @@ function submitTaskForm() {
     const recurrence = document.getElementById('m-recurrence').value;
     const category = document.getElementById('m-category').value;
     const is_habit = document.getElementById('m-is-habit').checked;
-    
-    if(!content) return;
+
+    if (!content) return;
     lastActionTime = Date.now();
 
     const payload = { content, priority, date, color, recurrence, category, is_habit };
     const url = editingTaskId ? `/api/tasks/${editingTaskId}/edit` : '/api/tasks/add';
-    
-    fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) })
-    .then(res => res.json()).then(data => { if(data.success) location.reload(); });
+
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        .then(res => res.json()).then(data => { if (data.success) location.reload(); });
 }
 
 function createTaskAPI(content, priority, date, color, category = 'general') {
     lastActionTime = Date.now();
     fetch('/api/tasks/add', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, priority, date, color, category })
-    }).then(res => res.json()).then(data => { if(data.success) location.reload(); });
+    }).then(res => res.json()).then(data => { if (data.success) location.reload(); });
 }
 
 function toggleTask(id) {
-    if(event) event.stopPropagation(); 
+    if (event) event.stopPropagation();
     const row = document.getElementById(`task-${id}`);
     lastActionTime = Date.now();
     row.classList.add('animating-out');
@@ -193,49 +294,38 @@ function toggleTask(id) {
                 if (data.new_state) {
                     row.classList.add('completed');
                     btn.innerHTML = '<i class="fas fa-check"></i>';
-                    taskList.appendChild(row); 
+                    taskList.appendChild(row);
                 } else {
                     row.classList.remove('completed');
                     btn.innerHTML = '';
-                    taskList.prepend(row); 
-                    row.style.display = 'flex'; 
+                    taskList.prepend(row);
+                    row.style.display = 'flex';
                 }
-                
-                syncDataVersion(); 
-                loadCharts(true); 
+
+                syncDataVersion();
+                loadCharts(true);
 
             }, 300);
-    });
+        });
 }
 
-function filterTasks(category, btnElement) {
-    document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
-    btnElement.classList.add('active');
-    document.querySelectorAll('.task-row').forEach(row => {
-        const rowCat = row.getAttribute('data-category');
-        const isCompleted = row.classList.contains('completed');
-        let shouldShow = (category === 'all') ? (!isCompleted || rowCat === 'general' || !rowCat) : (rowCat === category);
-        row.style.display = shouldShow ? 'flex' : 'none';
-    });
-}
-
-// --- 4. CHART ENGINE ---
+// --- 5. CHART ENGINE ---
 function loadCharts(softUpdate = false) {
     if (!softUpdate) console.log("📊 Loading Charts...");
-    
+
     fetch('/api/stats/charts').then(res => res.json()).then(data => {
         // --- A. RADIAL CHARTS ---
-        const radialContainer = document.getElementById('radial-chart'); 
+        const radialContainer = document.getElementById('radial-chart');
         if (radialContainer) {
             const existingItems = radialContainer.querySelectorAll('.radial-item');
             if (!softUpdate || existingItems.length !== data.radial.length) {
-                radialContainer.innerHTML = ''; 
+                radialContainer.innerHTML = '';
                 radialContainer.style.cssText = "display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%;";
-                
+
                 data.radial.forEach((percent, index) => {
                     const label = data.radial_labels[index];
                     const strokeColor = getColor(index);
-                    const circumference = 220; 
+                    const circumference = 220;
                     let offset = percent !== null ? circumference - (percent / 100) * circumference : circumference;
                     let textValue = percent !== null ? percent + '%' : '-';
                     let textColor = percent !== null ? 'white' : '#555';
@@ -253,9 +343,9 @@ function loadCharts(softUpdate = false) {
                             <div class="radial-label" style="font-size: 12px; color: #888; margin-top: 5px; text-align: center;">${label}</div>
                         </div>`;
                     radialContainer.innerHTML += html;
-                    setTimeout(() => { 
-                        if(radialContainer.children[index])
-                            radialContainer.children[index].querySelector('.progress-ring__circle').style.strokeDashoffset = offset; 
+                    setTimeout(() => {
+                        if (radialContainer.children[index])
+                            radialContainer.children[index].querySelector('.progress-ring__circle').style.strokeDashoffset = offset;
                     }, 50);
                 });
             } else {
@@ -275,20 +365,20 @@ function loadCharts(softUpdate = false) {
             }
         }
 
-        // --- B. HEATMAP (Fixed "Egg" Shape) ---
+        // --- B. HEATMAP (Fixed "Egg" Shape & Day Letters) ---
         const heatmapContainer = document.getElementById('habit-heatmap');
         if (heatmapContainer) {
             const currentRows = heatmapContainer.querySelectorAll('.habit-row');
             if (!softUpdate || currentRows.length !== data.heatmap.length) {
-                heatmapContainer.innerHTML = ''; 
-                
+                heatmapContainer.innerHTML = '';
+
                 if (data.heatmap && data.heatmap.length > 0) {
                     data.heatmap.forEach(habit => {
                         const habitWrapper = document.createElement('div');
                         habitWrapper.className = 'habit-row';
                         habitWrapper.setAttribute('id', `habit-row-${habit.id}`);
                         habitWrapper.style.marginBottom = '20px';
-                        
+
                         const titleDiv = document.createElement('div');
                         titleDiv.style.cssText = `color:${habit.color}; font-weight:bold; font-size:0.9rem; margin-bottom:8px;`;
                         titleDiv.innerText = habit.name;
@@ -299,25 +389,21 @@ function loadCharts(softUpdate = false) {
 
                         habit.data.forEach((day, i) => {
                             const dot = document.createElement('div');
-                            dot.className = 'habit-dot animate-in'; 
-                            
+                            dot.className = 'habit-dot animate-pop';
                             dot.style.animationDelay = `${i * 0.03}s`;
 
+                            // Date + Day Letter Calculation (e.g. "28 T")
                             const dayNum = day.real_date.split('-')[2];
-                            dot.setAttribute('data-date', dayNum); 
+                            const dateObj = new Date(day.real_date + 'T00:00:00');
+                            const dayLetter = dateObj.toLocaleDateString('en-US', { weekday: 'narrow' });
+                            dot.setAttribute('data-date', `${dayNum} ${dayLetter}`);
 
-                            // FIX: Added flex-shrink:0 and min-width/height to prevent squishing
                             dot.style.cssText = `
-                                width:16px; 
-                                height:16px; 
-                                min-width:16px; 
-                                min-height:16px; 
-                                flex-shrink:0; 
+                                width:16px; height:16px; min-width:16px; min-height:16px; flex-shrink:0; 
                                 border-radius:50%; 
                                 transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
                             `;
-                            
-                            // Check if Future
+
                             if (day.is_future) {
                                 dot.style.border = '2px dashed rgba(255,255,255,0.05)';
                                 dot.style.backgroundColor = 'transparent';
@@ -326,7 +412,7 @@ function loadCharts(softUpdate = false) {
                             } else {
                                 dot.style.backgroundColor = day.y > 0 ? day.fillColor : 'rgba(255,255,255,0.1)';
                                 dot.style.cursor = 'pointer';
-                                dot.onclick = function() { handleDotClick(this, habit.id, day.real_date, habit.color); };
+                                dot.onclick = function () { handleDotClick(this, habit.id, day.real_date, habit.color); };
                             }
                             rowDiv.appendChild(dot);
                         });
@@ -337,14 +423,13 @@ function loadCharts(softUpdate = false) {
                     heatmapContainer.innerHTML = '<div style="color:#555; font-style:italic;">No habits tracked yet.</div>';
                 }
             } else {
-                // SOFT UPDATE (Singular Animation)
                 data.heatmap.forEach((habit) => {
                     const row = document.getElementById(`habit-row-${habit.id}`);
-                    if(row) {
+                    if (row) {
                         const dots = row.querySelectorAll('.habit-dot');
                         habit.data.forEach((day, dIndex) => {
                             const dot = dots[dIndex];
-                            if(dot && !dot.classList.contains('confirming') && !dot.classList.contains('processing') && !day.is_future) {
+                            if (dot && !dot.classList.contains('confirming') && !dot.classList.contains('processing') && !day.is_future) {
                                 const newColor = day.y > 0 ? day.fillColor : 'rgba(255,255,255,0.1)';
                                 dot.style.backgroundColor = newColor;
                             }
@@ -358,11 +443,10 @@ function loadCharts(softUpdate = false) {
 
 function getColor(index) { return ['#3b5bdb', '#2ecc71', '#f1c40f', '#e74c3c', '#9b59b6'][index % 5]; }
 
-// --- 5. HABIT ANIMATION (Double-Tap) ---
+// --- 6. HABIT ANIMATION (Double-Tap) ---
 function handleDotClick(dotElement, taskId, dateStr, taskColor) {
     if (dotElement.classList.contains('processing')) return;
 
-    // STEP 1: DIM (Confirmation)
     if (!dotElement.classList.contains('confirming')) {
         dotElement.classList.add('confirming');
         dotElement.style.transform = 'scale(0.8)';
@@ -378,17 +462,15 @@ function handleDotClick(dotElement, taskId, dateStr, taskColor) {
             if (dotElement.style.backgroundColor === 'transparent') {
                 dotElement.style.backgroundColor = 'rgba(255,255,255,0.1)';
             }
-        }, 3000); 
-        return; 
+        }, 3000);
+        return;
     }
 
-    // STEP 2: CONFIRMED
     clearTimeout(dotElement.dataset.timer);
     dotElement.classList.remove('confirming');
     dotElement.classList.add('processing');
     lastActionTime = Date.now();
 
-    // Expansion Animation
     dotElement.style.transition = 'all 0.4s ease';
     dotElement.style.transform = 'scale(1.4)';
     dotElement.style.backgroundColor = taskColor;
@@ -397,21 +479,21 @@ function handleDotClick(dotElement, taskId, dateStr, taskColor) {
     dotElement.style.boxShadow = `0 0 15px ${taskColor}`;
 
     fetch(`/api/tasks/${taskId}/history/add`, {
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ date: dateStr })
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: dateStr })
     }).then(res => res.json()).then(data => {
-        setTimeout(() => { 
-            dotElement.style.transform = 'scale(1)'; 
+        setTimeout(() => {
+            dotElement.style.transform = 'scale(1)';
             dotElement.style.boxShadow = 'none';
             dotElement.classList.remove('processing');
-            syncDataVersion(); 
-            loadCharts(true); 
-        }, 400); 
+            syncDataVersion();
+            loadCharts(true);
+        }, 400);
     });
 }
 
 // --- INIT ---
 document.addEventListener('DOMContentLoaded', () => {
-    loadCharts(); 
+    loadCharts();
     const modal = document.getElementById('task-modal');
     if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
     const delModal = document.getElementById('delete-modal');

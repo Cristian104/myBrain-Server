@@ -1,0 +1,38 @@
+/* --- CSS Variables (The Color Palette) --- */
+:root {
+    --bg-dark-right: #121418;
+    --bg-dark-left: #050f0a;
+    --text-white: #ffffff;
+    --text-gray: #9ca3af;
+    --input-bg: #1a1d21;
+    --input-border: #333b4d;
+    --accent-blue: #3b5bdb;
+    --accent-blue-hover: #2c44a8;
+    --card-bg: rgba(20, 22, 27, 0.75);
+    --success-green: #2ecc71;
+    --warning-orange: #e67e22;
+    --danger-red: #e74c3c;
+    --card-surface: #1e2227;
+}
+
+/* --- Reset & Base Styles --- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    background-color: var(--bg-dark-right);
+    color: var(--text-white);
+    cursor: default; 
+}
+
+/* --- Scrollbar Styling --- */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: var(--accent-blue); }

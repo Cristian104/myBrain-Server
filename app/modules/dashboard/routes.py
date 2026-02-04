@@ -51,6 +51,11 @@ def settings():
 @dashboard_bp.route('/dev')
 @login_required
 def dev_panel():
+    # 👇 SECURITY CHECK
+    if current_user.role != 'dev':
+        flash("Access Denied: Developer clearance required.", "error")
+        return redirect(url_for('dashboard.dashboard_view'))
+
     return render_template('main/dev_panel.html')
 
 # --- API: TASKS ---
