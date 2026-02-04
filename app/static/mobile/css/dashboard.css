@@ -1,31 +1,154 @@
 /* app/static/mobile/css/dashboard.css */
+
 @media (max-width: 768px) {
-    /* 1. ENABLE SCROLLING */
-    body, .dashboard-body {
-        height: auto; min-height: 100vh; overflow-y: auto !important; flex-direction: column;
-    }
 
-    /* 2. BOTTOM NAV BAR */
-    .sidebar {
-        position: fixed; bottom: 0; left: 0; right: 0; width: 100%; height: 70px;
-        flex-direction: row; padding: 0; z-index: 9999; background: #0a1410;
-        border-top: 1px solid rgba(255,255,255,0.1); justify-content: space-around;
-        box-shadow: 0 -4px 20px rgba(0,0,0,0.5); top: auto;
-    }
-    .sidebar-header, .sidebar-footer, .logo-area, .user-area { display: none !important; }
-
-    .nav-links { display: flex; flex-direction: row; width: 100%; margin: 0; padding: 0; }
-    .nav-links li { margin: 0; flex: 1; display: flex; justify-content: center; }
-    .nav-links a {
-        flex-direction: column; gap: 4px; padding: 8px 0; font-size: 0.7rem;
-        border-radius: 0; color: var(--text-gray); width: 100%; justify-content: center;
-    }
-    .nav-links a i { font-size: 1.4rem; margin: 0; }
-
-    /* 3. CONTENT ADJUSTMENTS */
-    .content-area { margin-left: 0; width: 100%; padding-bottom: 100px; }
-    .dashboard-grid, .stats-row, .dashboard-split { display: flex; flex-direction: column; gap: 20px; }
+    /* --- 1. GLOBAL LAYOUT & SPACING --- */
+    html, body { overflow-x: hidden; width: 100%; background: #0d1117; }
+    .main-wrapper { flex-direction: column; width: 100%; overflow: hidden; }
+    .content-area { margin-left: 0 !important; width: 100% !important; padding: 0 0 90px 0; }
     
-    /* 4. MOBILE GRIDS */
-    .apps-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    /* Give the content some side padding */
+    .dashboard-content { 
+        padding: 20px 20px; 
+        max-width: 100vw; 
+        display: flex; 
+        flex-direction: column; 
+        gap: 25px; /* 👈 Adds 25px space between EVERY section automatically */
+    }
+    
+    /* Remove individual margins since 'gap' handles it now */
+    .welcome-banner, .stats-row, .dashboard-split, .stats-layout-wrapper {
+        margin-bottom: 0 !important; 
+    }
+
+    /* Force Hide Apps Panel */
+    .panel-left { display: none !important; }
+    .dashboard-split { display: flex !important; flex-direction: column !important; }
+    .panel-right { width: 100% !important; max-width: 100% !important; }
+
+    /* --- 2. HEADER SWAPPING --- */
+    .desktop-only { display: none !important; }
+    .mobile-header { 
+        display: block !important; 
+        font-size: 0.75rem; color: #888; 
+        text-transform: uppercase; letter-spacing: 1px; font-weight: 700;
+        margin-bottom: 10px;
+    }
+
+    /* --- 3. THE SIDE-BY-SIDE GRID --- */
+    .stats-layout-wrapper {
+        display: grid;
+        grid-template-columns: 35% 60%; /* Slightly more space for ring */
+        gap: 5%;
+        align-items: center;
+        width: 100%;
+        padding-top: 10px; /* Extra breathing room top */
+        border-top: 1px solid rgba(255,255,255,0.05); /* Optional: Subtle separator */
+    }
+
+    /* --- 4. LEFT COLUMN (Tiny Ring) --- */
+    .stats-col-left {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        height: 100%; /* Take full height of the neighbor */
+    }
+
+    #radial-chart {
+        width: 100%;
+        display: flex; justify-content: center; align-items: center;
+        transform: scale(0.85); 
+        transform-origin: center center; /* 👈 Ensures it stays centered when shrinking */
+        margin: 0; /* Remove any manual offsets */
+    }
+    
+    .radial-item.desktop-ring { display: none !important; }
+    .radial-item.mobile-ring { display: flex !important; margin: 0; }
+    .radial-label { display: none; } 
+
+    /* --- 5. RIGHT COLUMN (Fixed Dots) --- */
+    .stats-col-right { overflow: hidden; }
+
+    #habit-heatmap {
+        width: 100%;
+        display: flex; flex-direction: column;
+        gap: 12px; /* Space between habit rows */
+    }
+
+    .habit-row { width: 100%; margin-bottom: 0 !important; }
+
+    /* Habit Name */
+    .habit-row div:first-child {
+        font-size: 0.75rem !important;
+        margin-bottom: 4px !important;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        color: #bbb;
+    }
+
+    /* The Dot Strip Container */
+    .habit-row > div:last-child {
+        display: flex;
+        flex-wrap: nowrap !important;
+        overflow-x: auto; /* Enable Scroll */
+        gap: 6px; 
+        padding: 2px 0 6px 0; /* Extra bottom padding prevents clipping */
+        mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        -webkit-overflow-scrolling: touch; /* Smooth iOS scroll */
+        
+        /* 🛑 HIDE SCROLLBARS */
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+    }
+
+    /* 🛑 HIDE SCROLLBARS (Chrome/Safari) */
+    .habit-row > div:last-child::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    /* 🥚 FIX: NO MORE EGGS */
+    .habit-dot {
+        width: 14px !important; 
+        height: 14px !important; 
+        min-width: 14px !important; /* Force width */
+        min-height: 14px !important; /* Force height */
+        border-radius: 50% !important; /* Perfect circle */
+        flex-shrink: 0; /* Prevent squishing */
+        aspect-ratio: 1 / 1; /* Modern browser enforcement */
+    }
+
+    /* --- 6. NAV & EXTRAS --- */
+    .stats-row { display: flex; gap: 10px; }
+    .stat-card { padding: 15px; flex: 1; flex-direction: column; gap: 5px; }
+    .stat-icon { width: 28px; height: 28px; font-size: 0.9rem; }
+    .stat-details h3 { display: none; }
+    .stat-details h2 { font-size: 1rem; margin: 0; text-align: center; }
+    .progress-track { height: 4px; margin-top: 5px; }
+
+    /* Bottom Nav */
+    .sidebar {
+        position: fixed !important; top: auto !important; bottom: 0 !important; left: 0;
+        width: 100%; height: 65px; background: #0d1117; 
+        border-top: 1px solid rgba(255,255,255,0.1); display: flex; z-index: 9999;
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
+    }
+    .nav-links { width: 100%; justify-content: space-around; padding: 0; margin: 0; display: flex; align-items: center; }
+    .nav-links li { flex: 1; display: flex; justify-content: center; }
+    .nav-links a { flex-direction: column; gap: 4px; font-size: 0.65rem; color: var(--text-gray); }
+    .nav-links i { font-size: 1.2rem; }
+    .sidebar .logo-area, .sidebar .user-area { display: none !important; }
+    .nav-logout { display: flex !important; }
+    .nav-logout a { color: var(--danger-red) !important; }
+    
+    /* Login Toast */
+    .flash-messages {
+        position: fixed; top: 25px; left: 50%; transform: translateX(-50%);
+        width: 90%; max-width: 350px; z-index: 10000; pointer-events: none;
+    }
+    .alert {
+        background: rgba(59, 91, 219, 0.95); backdrop-filter: blur(12px); color: white;
+        font-size: 0.9rem; padding: 12px 20px; text-align: center; border-radius: 50px;
+        animation: slideDownFade 0.5s ease-out, fadeOut 0.5s forwards 4s;
+    }
+    @keyframes slideDownFade { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeOut { to { opacity: 0; visibility: hidden; } }
 }

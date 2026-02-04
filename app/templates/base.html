@@ -36,7 +36,6 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='dashboard/css/dashboard.css') }}"
     />
-
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='mobile/css/dashboard.css') }}"
@@ -91,6 +90,13 @@
             <a href="{{ url_for('dashboard.settings') }}">
               <i class="fas fa-cog"></i>
               <span class="link-text">Settings</span>
+            </a>
+          </li>
+
+          <li class="nav-logout">
+            <a href="{{ url_for('auth.logout') }}">
+              <i class="fas fa-sign-out-alt"></i>
+              <span class="link-text">Logout</span>
             </a>
           </li>
         </ul>

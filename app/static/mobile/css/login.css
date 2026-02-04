@@ -1,71 +1,103 @@
-/* =========================================
-   MOBILE LOGIN ("App Entry" Style)
-   ========================================= */
+/* app/static/mobile/css/login.css */
 
+/* ⚠️ CRITICAL: Only apply these rules on screens smaller than 768px */
 @media (max-width: 768px) {
-    
-    /* 1. Reset Layout for Single Column */
+
+    /* 1. LAYOUT: Overlay Strategy (Stack layers on top of each other) */
     .split-screen {
-        flex-direction: column;
+        display: block; /* Disable the side-by-side flex */
+        position: relative;
         height: 100vh;
         width: 100vw;
-        background-color: var(--bg-dark-right);
+        overflow: hidden;
     }
 
-    /* 2. Hide the Desktop "Fluid" Side completely */
+    /* 2. BACKGROUND LAYER (The Animation) */
     .left-pane {
-        display: none !important; 
-    }
-
-    /* 3. Full Screen Form Container */
-    .right-pane {
-        width: 100%;
+        display: flex !important; /* Force it to show (if it was hidden) */
+        position: absolute;
+        top: 0; 
+        left: 0;
+        width: 100%; 
         height: 100%;
-        padding: 20px;
-        border-left: none;
-        align-items: flex-start; /* Move contents up slightly */
-        padding-top: 15vh;       /* Start 15% down the screen */
-    }
-
-    /* 4. The Login Card */
-    .login-box {
-        width: 100%;
-        max-width: 100%;
-        padding: 0 10px;
-    }
-
-    /* 5. Typography Adjustments */
-    .login-box h1 {
-        font-size: 2.2rem;
-        margin-bottom: 10px;
-        text-align: left; 
-    }
-
-    .sub-header {
-        text-align: left;
-        margin-bottom: 40px;
-        font-size: 1rem;
-    }
-
-    /* 6. Mobile Input Fields (Larger Touch Targets) */
-    .input-group input {
-        padding: 15px; /* Bigger tap area */
-        font-size: 16px; /* Prevents iOS zoom on focus */
-        background-color: #1e2227; /* Slightly lighter on mobile */
-    }
-
-    /* 7. Big "Thumb-Friendly" Button */
-    .btn-primary {
-        padding: 16px;
-        font-size: 1.1rem;
-        margin-top: 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(59, 91, 219, 0.3);
+        z-index: 0; /* Send to back */
     }
     
-    /* 8. Footer Link */
+    /* Hide the quote carousel on mobile to clear the view */
+    .carousel-container { 
+        display: none !important; 
+    }
+    
+    /* Ensure the shader canvas fills the screen */
+    #fluid-container {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* 3. FOREGROUND LAYER (The Form) */
+    .right-pane {
+        position: relative;
+        z-index: 10; /* Bring to front */
+        width: 100%;
+        height: 100%;
+        background: transparent; /* Make pane see-through */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        border-left: none; /* Remove desktop border */
+    }
+
+    /* 4. GLASS CARD DESIGN */
+    .login-box {
+        background: rgba(13, 17, 23, 0.75); /* Dark semi-transparent */
+        backdrop-filter: blur(12px); /* Blur the animation behind it */
+        -webkit-backdrop-filter: blur(12px); /* Safari support */
+        padding: 40px 30px;
+        border-radius: 24px;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        
+        width: 100%;
+        max-width: 100%; /* Fill width on phone */
+    }
+
+    /* 5. TOUCH-FRIENDLY INPUTS */
+    .login-box h1 { 
+        font-size: 1.8rem; 
+        text-align: center; 
+        margin-bottom: 10px;
+    }
+    
+    .sub-header { 
+        text-align: center; 
+        margin-bottom: 30px; 
+    }
+    
+    /* Bigger inputs for fingers */
+    .input-group input {
+        padding: 16px; 
+        font-size: 1rem;
+        background: rgba(0, 0, 0, 0.3); /* Darker input background */
+        border-color: rgba(255,255,255,0.1);
+    }
+    
+    .input-group input:focus {
+        background: rgba(0, 0, 0, 0.5);
+        border-color: var(--accent-blue);
+    }
+    
+    /* Big, thumb-friendly button */
+    .btn-primary {
+        width: 100%;
+        padding: 16px;
+        font-size: 1.1rem;
+        margin-top: 15px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(59, 91, 219, 0.4);
+    }
+
     .footer-link {
-        margin-top: 30px;
-        font-size: 0.9rem;
+        margin-top: 25px;
     }
 }

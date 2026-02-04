@@ -339,3 +339,34 @@
 
 /* Ensure list doesn't collapse completely */
 #task-list { min-height: 50px; }
+
+/* app/static/dashboard/css/dashboard.css */
+
+/* Hide the mobile logout button on desktop screens */
+/* (Because desktop already has the profile logout link) */
+.nav-logout {
+    display: none;
+}
+
+/* app/static/dashboard/css/dashboard.css */
+
+/* 1. RESET WRAPPER FOR DESKTOP (Stack Vertically) */
+.stats-layout-wrapper {
+    display: block; /* Normal stacking */
+    width: 100%;
+}
+
+.stats-col-left, .stats-col-right {
+    width: 100%;
+    margin-bottom: 30px; /* Keep original spacing */
+}
+
+/* 2. HIDE MOBILE HEADERS ON DESKTOP */
+.mobile-header {
+    display: none;
+}
+
+/* 3. ENSURE DESKTOP HEADERS ARE VISIBLE */
+.desktop-only {
+    display: block;
+}

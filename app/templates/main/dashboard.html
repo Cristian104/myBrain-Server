@@ -135,7 +135,6 @@
             class="task-row {% if task.complete %}completed{% endif %}"
             id="task-{{ task.id }}"
             data-category="{{ task.category or 'general' }}"
-            {# --- FIX: Hide Completed Categorized tasks on load (prevents reappearing on refresh) --- #}
             style="{% if task.complete and task.category and task.category != 'general' %}display: none;{% endif %}"
           >
             <div
@@ -206,35 +205,22 @@
       </div>
     </div>
   </div>
-  <div
-    class="life-stats-container"
-    style="
-      margin-top: 40px;
-      margin-bottom: 50px;
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-    "
-  >
-    <div
-      class="card-glass"
-      style="
-        flex: 1;
-        min-width: 300px;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      "
-    >
-      <h4 style="margin-bottom: 15px; color: var(--text-gray); width: 100%">
+
+  <div class="stats-layout-wrapper">
+    <div class="stats-col-left card-glass">
+      <h4
+        class="desktop-only"
+        style="margin-bottom: 15px; color: var(--text-gray); width: 100%"
+      >
         Weekly Focus
       </h4>
-      <div id="radial-chart" style="width: 100%; min-height: 280px"></div>
+      <h3 class="mobile-header">Focus</h3>
+      <div id="radial-chart" style="width: 100%"></div>
     </div>
 
-    <div class="card-glass" style="flex: 2; min-width: 450px; padding: 20px">
+    <div class="stats-col-right card-glass">
       <div
+        class="desktop-only"
         style="
           display: flex;
           justify-content: space-between;
@@ -242,10 +228,17 @@
           margin-bottom: 15px;
         "
       >
-        <h4 style="color: var(--text-gray)">Habit Consistency (30 Days)</h4>
+        <h4 style="color: var(--text-gray); margin: 0">
+          Habit Consistency (30 Days)
+        </h4>
         <span class="badge-mini badge-health">Health & Meds</span>
       </div>
-      <div id="habit-heatmap" style="width: 100%; min-height: 280px"></div>
+      <h3 class="mobile-header">Habits</h3>
+      <div
+        id="habit-heatmap"
+        class="life-stats-container"
+        style="width: 100%"
+      ></div>
     </div>
   </div>
 
@@ -343,21 +336,29 @@
 
   <div id="delete-modal" class="modal-overlay">
     <div class="modal-card delete-mode">
-        <div class="modal-header">
-            <h3><i class="fas fa-exclamation-triangle"></i> Delete Habit?</h3>
-            <button class="btn-close" onclick="closeDeleteModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p>You are about to delete <strong><span id="del-task-name">this task</span></strong>.</p>
-            <p class="warning-text">
-                This is a tracked habit. Deleting it will <strong>permanently erase all history</strong> and streaks associated with it from the heatmap.
-            </p>
-            <p>This action cannot be undone.</p>
-        </div>
-        <div class="modal-footer">
-            <button class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
-            <button class="btn-danger-confirm" id="btn-confirm-delete">Yes, Delete Everything</button>
-        </div>
+      <div class="modal-header">
+        <h3><i class="fas fa-exclamation-triangle"></i> Delete Habit?</h3>
+        <button class="btn-close" onclick="closeDeleteModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>
+          You are about to delete
+          <strong><span id="del-task-name">this task</span></strong
+          >.
+        </p>
+        <p class="warning-text">
+          This is a tracked habit. Deleting it will
+          <strong>permanently erase all history</strong> and streaks associated
+          with it from the heatmap.
+        </p>
+        <p>This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn-danger-confirm" id="btn-confirm-delete">
+          Yes, Delete Everything
+        </button>
+      </div>
     </div>
   </div>
 

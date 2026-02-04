@@ -314,55 +314,68 @@ function loadCharts(softUpdate = false) {
     if (!softUpdate) console.log("📊 Loading Charts...");
 
     fetch('/api/stats/charts').then(res => res.json()).then(data => {
-        // --- A. RADIAL CHARTS ---
-        const radialContainer = document.getElementById('radial-chart');
+        // --- A. RADIAL CHARTS (Mobile Optimized) ---
+        const radialContainer = document.getElementById('radial-chart'); 
         if (radialContainer) {
-            const existingItems = radialContainer.querySelectorAll('.radial-item');
-            if (!softUpdate || existingItems.length !== data.radial.length) {
-                radialContainer.innerHTML = '';
-                radialContainer.style.cssText = "display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%;";
+            // 1. Calculate Average
+            let total = 0, count = 0;
+            data.radial.forEach(p => { if(p !== null) { total += p; count++; } });
+            const average = count > 0 ? Math.round(total / count) : 0;
+            
+            radialContainer.innerHTML = ''; 
+            
+            // 2. Create Desktop Rings (With class 'desktop-ring')
+            data.radial.forEach((percent, index) => {
+                const label = data.radial_labels[index];
+                const strokeColor = getColor(index);
+                const circumference = 220; 
+                let offset = percent !== null ? circumference - (percent / 100) * circumference : circumference;
+                let textValue = percent !== null ? percent + '%' : '-';
+                
+                // Note the class 'desktop-ring' added here
+                const html = `
+                    <div class="radial-item desktop-ring" style="position: relative; width: 80px; display: flex; flex-direction: column; align-items: center; margin-bottom: 10px;">
+                        <div style="position: relative; width: 80px; height: 80px;">
+                            <svg class="progress-ring" width="80" height="80">
+                                <circle stroke="#333" stroke-width="8" fill="transparent" r="35" cx="40" cy="40"/>
+                                <circle class="progress-ring__circle" stroke="${strokeColor}" stroke-width="8" fill="transparent" r="35" cx="40" cy="40"
+                                    style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${circumference}; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 1s ease-out;"/>
+                            </svg>
+                            <div class="radial-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: white;">${textValue}</div>
+                        </div>
+                        <div class="radial-label" style="font-size: 12px; color: #888; margin-top: 5px; text-align: center;">${label}</div>
+                    </div>`;
+                radialContainer.innerHTML += html;
+                setTimeout(() => { 
+                    if(radialContainer.children[index])
+                        radialContainer.children[index].querySelector('.progress-ring__circle').style.strokeDashoffset = offset; 
+                }, 50);
+            });
 
-                data.radial.forEach((percent, index) => {
-                    const label = data.radial_labels[index];
-                    const strokeColor = getColor(index);
-                    const circumference = 220;
-                    let offset = percent !== null ? circumference - (percent / 100) * circumference : circumference;
-                    let textValue = percent !== null ? percent + '%' : '-';
-                    let textColor = percent !== null ? 'white' : '#555';
-
-                    const html = `
-                        <div class="radial-item" style="position: relative; width: 80px; display: flex; flex-direction: column; align-items: center; margin-bottom: 10px;">
-                            <div style="position: relative; width: 80px; height: 80px;">
-                                <svg class="progress-ring" width="80" height="80">
-                                    <circle stroke="#333" stroke-width="8" fill="transparent" r="35" cx="40" cy="40"/>
-                                    <circle class="progress-ring__circle" stroke="${strokeColor}" stroke-width="8" fill="transparent" r="35" cx="40" cy="40"
-                                        style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${circumference}; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 1s ease-out;"/>
-                                </svg>
-                                <div class="radial-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: ${textColor};">${textValue}</div>
-                            </div>
-                            <div class="radial-label" style="font-size: 12px; color: #888; margin-top: 5px; text-align: center;">${label}</div>
-                        </div>`;
-                    radialContainer.innerHTML += html;
-                    setTimeout(() => {
-                        if (radialContainer.children[index])
-                            radialContainer.children[index].querySelector('.progress-ring__circle').style.strokeDashoffset = offset;
-                    }, 50);
-                });
-            } else {
-                data.radial.forEach((percent, index) => {
-                    const item = existingItems[index];
-                    const circle = item.querySelector('.progress-ring__circle');
-                    const text = item.querySelector('.radial-text');
-                    const circumference = 220;
-                    if (percent === null) {
-                        circle.style.strokeDashoffset = circumference;
-                        text.innerText = '-'; text.style.color = '#555';
-                    } else {
-                        circle.style.strokeDashoffset = circumference - (percent / 100) * circumference;
-                        text.innerText = percent + '%'; text.style.color = 'white';
-                    }
-                });
-            }
+            // 3. Create SINGLE Mobile Ring (With class 'mobile-ring')
+            const mobileCirc = 440; // Bigger circumference
+            const mobileOffset = mobileCirc - (average / 100) * mobileCirc;
+            
+            const mobileHtml = `
+                <div class="radial-item mobile-ring" style="display: none; position: relative; width: 150px; flex-direction: column; align-items: center; margin: 0 auto;">
+                    <div style="position: relative; width: 150px; height: 150px;">
+                        <svg class="progress-ring" width="150" height="150">
+                            <circle stroke="#222" stroke-width="12" fill="transparent" r="70" cx="75" cy="75"/>
+                            <circle class="progress-ring__circle" stroke="#3b5bdb" stroke-width="12" fill="transparent" r="70" cx="75" cy="75"
+                                style="stroke-dasharray: ${mobileCirc}; stroke-dashoffset: ${mobileCirc}; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 1s ease-out;"/>
+                        </svg>
+                        <div class="radial-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem; font-weight: bold; color: white;">
+                            ${average}%
+                        </div>
+                    </div>
+                    <div class="radial-label" style="font-size: 1rem; color: #aaa; margin-top: 10px; text-align: center;">Overall Focus</div>
+                </div>`;
+                
+            radialContainer.innerHTML += mobileHtml;
+            setTimeout(() => { 
+                const mobRing = radialContainer.querySelector('.mobile-ring .progress-ring__circle');
+                if(mobRing) mobRing.style.strokeDashoffset = mobileOffset; 
+            }, 50);
         }
 
         // --- B. HEATMAP (Fixed "Egg" Shape & Day Letters) ---

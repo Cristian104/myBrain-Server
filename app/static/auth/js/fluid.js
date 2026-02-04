@@ -11,10 +11,15 @@ let renderer, scene, camera;
 let fluidMaterial, quad;
 let currentRenderTarget, nextRenderTarget;
 let mouse = new THREE.Vector2(0.5, 0.5);
+let autoTime = 0; // Timer for mobile auto-animation
+let isMobile = false; // Flag to track mode
 
 const container = document.getElementById('fluid-container');
 
 function init() {
+    // 1. Detect Mobile
+    isMobile = window.innerWidth <= 768;
+
     const width = container.offsetWidth;
     const height = container.offsetHeight;
 
@@ -63,15 +68,21 @@ function init() {
         quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fluidMaterial);
         scene.add(quad);
 
+        // Start Animation Loop
         animate();
     });
 
     // --- Event Listeners ---
     window.addEventListener('resize', onResize);
-    container.addEventListener('mousemove', onMouseMove);
+
+    // Only attach mouse listener if NOT mobile
+    if (!isMobile) {
+        container.addEventListener('mousemove', onMouseMove);
+    }
 }
 
 function onMouseMove(e) {
+    if (isMobile) return; // Double check safety
     const rect = container.getBoundingClientRect();
     mouse.x = (e.clientX - rect.left) / rect.width;
     mouse.y = 1.0 - (e.clientY - rect.top) / rect.height; // Flip Y
@@ -81,12 +92,39 @@ function onResize() {
     const width = container.offsetWidth;
     const height = container.offsetHeight;
     renderer.setSize(width, height);
+    
+    // Update mobile flag on resize (e.g. rotating tablet)
+    const wasMobile = isMobile;
+    isMobile = window.innerWidth <= 768;
+    
+    // If we switched modes, attach/detach listeners accordingly
+    if (wasMobile && !isMobile) {
+        container.addEventListener('mousemove', onMouseMove);
+    } else if (!wasMobile && isMobile) {
+        container.removeEventListener('mousemove', onMouseMove);
+    }
+}
+
+function autoMove() {
+    autoTime += 0.02; // Speed of the figure-8
+    
+    // Figure-8 Pattern Logic
+    // sin(t) for X goes left/right
+    // sin(2t) for Y creates the loop (up/down twice as fast)
+    // 0.5 is the center of the screen
+    mouse.x = 0.5 + Math.sin(autoTime) * 0.3;      // Swing 30% left/right
+    mouse.y = 0.5 + Math.sin(autoTime * 2) * 0.15; // Swing 15% up/down
 }
 
 function animate(time) {
     requestAnimationFrame(animate);
 
     if (!fluidMaterial) return;
+
+    // --- Mobile Logic ---
+    if (isMobile) {
+        autoMove();
+    }
 
     // --- Simulation Step ---
     // 1. Set current fluid state as input texture
