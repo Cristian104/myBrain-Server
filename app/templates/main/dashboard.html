@@ -1,7 +1,7 @@
 {% extends "base.html" %} {% block content %}
 <div class="dashboard-content">
   <div class="welcome-banner">
-    <h1>Welcome back, {{ current_user.username }}</h1>
+    <h1>Welcome back, {{ current_user.username|title }}</h1>
     <p>System operational. Ready for command.</p>
   </div>
 
