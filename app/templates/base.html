@@ -26,12 +26,12 @@
     />
   </head>
   <body>
-    <a href="{{ url_for('main.settings') }}" class="nav-item">
+    <a href="{{ url_for('dashboard.settings') }}" class="nav-item">
       <i class="fas fa-cog"></i> <span>Settings</span>
     </a>
 
     <a
-      href="{{ url_for('main.dev_panel') }}"
+      href="{{ url_for('dashboard.dev_panel') }}"
       class="nav-item"
       style="opacity: 0.5"
     >
@@ -46,7 +46,7 @@
 
         <ul class="nav-links">
           <li class="{{ 'active' if request.endpoint == 'main.dashboard' }}">
-            <a href="{{ url_for('main.dashboard') }}">
+            <a href="{{ url_for('dashboard.dashboard_view') }}">
               <i class="fas fa-th-large"></i>
               <span class="link-text">Dashboard</span>
             </a>
