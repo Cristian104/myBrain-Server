@@ -1,6 +1,8 @@
+from app.modules.gym.routes import gym_bp
+from app.modules.auth.routes import auth_bp
+from app.modules.dashboard.routes import dashboard_bp
 import os
 from flask import Flask
-# 👇 CHANGE 1: Import shared tools from extensions
 from app.extensions import db, login_manager
 
 
@@ -26,7 +28,6 @@ def create_app():
     login_manager.login_view = 'auth.login'
 
     # User Loader
-    # 👇 CHANGE 2: Absolute import
     from app.models import User
 
     @login_manager.user_loader
@@ -35,15 +36,14 @@ def create_app():
 
     # --- REGISTER BLUEPRINTS (THE NEW WIRING) ---
 
-    # 👇 CHANGE 3: Registering the new modules
-
     # 1. Auth Module
-    from app.modules.auth.routes import auth_bp
     app.register_blueprint(auth_bp)
 
     # 2. Dashboard Module
-    from app.modules.dashboard.routes import dashboard_bp
     app.register_blueprint(dashboard_bp)
+
+    # 3. Gym Module (👇 ADDED THIS)
+    app.register_blueprint(gym_bp)
 
     # --------------------------------------------
 
@@ -54,7 +54,6 @@ def create_app():
             start_bot_listener(app)
 
     # Start Scheduler
-    # 👇 CHANGE 4: Absolute import
     from app.scheduler import start_scheduler
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         start_scheduler(app)

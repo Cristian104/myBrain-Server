@@ -66,6 +66,13 @@
             </a>
           </li>
 
+          <li class="{{ 'active' if 'gym' in request.endpoint }}">
+            <a href="{{ url_for('gym.index') }}">
+              <i class="fas fa-dumbbell"></i>
+              <span class="link-text">Workouts</span>
+            </a>
+          </li>
+
           <li>
             <a href="#">
               <i class="fas fa-server"></i>

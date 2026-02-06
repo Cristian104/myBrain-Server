@@ -1,0 +1,268 @@
+{% extends "base.html" %} {% block content %}
+<div class="dashboard-content" style="max-width: 900px; margin: 0 auto">
+  <div
+    style="
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    "
+  >
+    <div class="welcome-banner" style="margin: 0; padding: 0; background: none">
+      <h1>Exercise Library</h1>
+      <p>Manage templates, videos, and GIFs.</p>
+    </div>
+    <a
+      href="{{ url_for('gym.index') }}"
+      class="btn-sm"
+      style="background: rgba(255, 255, 255, 0.1)"
+      >Back to Gym</a
+    >
+  </div>
+
+  <div style="margin-bottom: 20px">
+    <input
+      type="text"
+      id="library-search"
+      placeholder="Search exercises..."
+      style="
+        width: 100%;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.3);
+        color: white;
+      "
+      onkeyup="filterLibrary()"
+    />
+  </div>
+
+  <div
+    class="library-grid"
+    id="library-grid"
+    style="
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    "
+  >
+    {% for ex in exercises %}
+    <div
+      class="card-glass library-card"
+      data-name="{{ ex.name_en.lower() }} {{ ex.name_es.lower() if ex.name_es else '' }}"
+      style="position: relative"
+    >
+      <a
+        href="{{ url_for('gym.delete_library_item', ex_id=ex.id) }}"
+        onclick="
+          return confirm(
+            'Are you sure? This will NOT delete past workouts, only the template for future use.',
+          );
+        "
+        style="
+          position: absolute;
+          top: 15px;
+          right: 15px;
+          color: #666;
+          transition: 0.2s;
+        "
+        onmouseover="this.style.color = '#e74c3c'"
+        onmouseout="this.style.color = '#666'"
+      >
+        <i class="fas fa-trash"></i>
+      </a>
+
+      <div style="margin-bottom: 15px; padding-right: 20px">
+        <h3 style="margin: 0; font-size: 1.1rem">{{ ex.name_en }}</h3>
+        {% if ex.name_es %}
+        <small style="color: #888">{{ ex.name_es }}</small>
+        {% endif %}
+      </div>
+
+      <div
+        style="
+          height: 120px;
+          background: rgba(0, 0, 0, 0.3);
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 15px;
+          overflow: hidden;
+          position: relative;
+        "
+      >
+        {% if ex.image_filename %}
+        <img
+          src="{{ url_for('static', filename='uploads/gym/' + ex.image_filename) }}"
+          style="width: 100%; height: 100%; object-fit: cover"
+        />
+        {% else %}
+        <div style="color: #444; font-size: 2rem">
+          <i class="fas fa-image"></i>
+        </div>
+        <span
+          style="
+            position: absolute;
+            bottom: 10px;
+            font-size: 0.7rem;
+            color: #666;
+          "
+          >No GIF/Image</span
+        >
+        {% endif %} {% if ex.video_url %}
+        <a
+          href="{{ ex.video_url }}"
+          target="_blank"
+          style="
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+          "
+        >
+          <i class="fas fa-play"></i>
+        </a>
+        {% endif %}
+      </div>
+
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.85rem;
+          color: #aaa;
+          margin-bottom: 15px;
+        "
+      >
+        <span
+          >Sets:
+          <strong style="color: white">{{ ex.default_sets }}</strong></span
+        >
+        <span
+          >Reps:
+          <strong style="color: white">{{ ex.default_reps }}</strong></span
+        >
+      </div>
+
+      <button
+        onclick="openEditModal({{ ex.id }}, '{{ ex.name_en }}', '{{ ex.name_es or '' }}', {{ ex.default_sets }}, '{{ ex.default_reps }}', '{{ ex.video_url or '' }}')"
+        class="btn-sm"
+        style="
+          width: 100%;
+          text-align: center;
+          background: rgba(255, 255, 255, 0.05);
+        "
+      >
+        Edit Media & Stats
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div id="edit-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Edit Template</h3>
+    <form id="edit-form" method="POST" enctype="multipart/form-data">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+        <div>
+          <label>Name (EN)</label>
+          <input type="text" name="name_en" id="modal-name-en" required />
+        </div>
+        <div>
+          <label>Name (ES)</label>
+          <input type="text" name="name_es" id="modal-name-es" />
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+        <div>
+          <label>Def. Sets</label>
+          <input type="number" name="default_sets" id="modal-sets" />
+        </div>
+        <div>
+          <label>Def. Reps</label>
+          <input type="text" name="default_reps" id="modal-reps" />
+        </div>
+      </div>
+
+      <hr
+        style="
+          border: 0;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          margin: 15px 0;
+        "
+      />
+
+      <label>YouTube Link</label>
+      <input
+        type="url"
+        name="video_url"
+        id="modal-video"
+        placeholder="https://youtube.com/..."
+      />
+
+      <label>Upload GIF / Image (Max 5MB)</label>
+      <input
+        type="file"
+        name="image_file"
+        accept="image/*"
+        style="
+          padding: 10px;
+          background: rgba(0, 0, 0, 0.2);
+          width: 100%;
+          border-radius: 5px;
+        "
+      />
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="btn-cancel"
+          onclick="
+            document.getElementById('edit-modal').classList.remove('active')
+          "
+        >
+          Cancel
+        </button>
+        <button type="submit" class="btn-save">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function filterLibrary() {
+    const query = document.getElementById("library-search").value.toLowerCase();
+    const cards = document.querySelectorAll(".library-card");
+    cards.forEach((card) => {
+      const name = card.getAttribute("data-name");
+      card.style.display = name.includes(query) ? "block" : "none";
+    });
+  }
+
+  function openEditModal(id, en, es, sets, reps, video) {
+    document.getElementById("edit-form").action = `/gym/library/update/${id}`;
+    document.getElementById("modal-name-en").value = en;
+    document.getElementById("modal-name-es").value = es;
+    document.getElementById("modal-sets").value = sets;
+    document.getElementById("modal-reps").value = reps;
+    document.getElementById("modal-video").value = video;
+    document.getElementById("edit-modal").classList.add("active");
+  }
+
+  window.onclick = function (event) {
+    const modal = document.getElementById("edit-modal");
+    if (event.target == modal) modal.classList.remove("active");
+  };
+</script>
+{% endblock %}

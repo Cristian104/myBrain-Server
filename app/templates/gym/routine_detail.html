@@ -1,0 +1,309 @@
+{% extends "base.html" %} {% block content %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='gym/css/routine_detail.css') }}"
+/>
+
+<div class="dashboard-content" style="max-width: 800px; margin: 0 auto">
+  <div class="detail-header">
+    <div>
+      <h1 class="routine-title">{{ routine.name }}</h1>
+      <p class="routine-subtitle">
+        {{ routine.exercises|length }} Exercises • Day {{ routine.order_index }}
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px">
+      <a href="{{ url_for('gym.index') }}" class="btn-back">
+        <i class="fas fa-arrow-left"></i> Back
+      </a>
+    </div>
+  </div>
+
+  <div
+    class="add-exercise-wrapper"
+    style="margin-bottom: 30px; transition: 0.3s"
+    id="add-card"
+  >
+    <form
+      action="{{ url_for('gym.add_exercise', routine_id=routine.id) }}"
+      method="POST"
+      class="add-form-grid"
+      autocomplete="off"
+    >
+      <div class="form-group" style="position: relative">
+        <label>Exercise Name</label>
+        <input
+          type="text"
+          id="ex-name"
+          name="name"
+          class="form-input"
+          placeholder="Search or type new..."
+          required
+          oninput="searchExercises()"
+        />
+
+        <input type="hidden" id="ex-lib-id" name="library_id" />
+        <input type="hidden" id="ex-es" name="name_es" />
+
+        <div
+          id="suggestions-box"
+          style="
+            position: absolute;
+            top: 105%;
+            left: 0;
+            width: 100%;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+          "
+        ></div>
+      </div>
+
+      <div class="form-group">
+        <label>Sets</label
+        ><input
+          type="number"
+          id="ex-sets"
+          name="sets"
+          class="form-input"
+          value="3"
+        />
+      </div>
+      <div class="form-group">
+        <label>Reps</label
+        ><input
+          type="text"
+          id="ex-reps"
+          name="reps"
+          class="form-input"
+          placeholder="8-12"
+        />
+      </div>
+
+      <button
+        type="submit"
+        class="btn-save btn-save-icon"
+        style="
+          height: 44px;
+          width: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+        "
+      >
+        <i class="fas fa-plus"></i>
+      </button>
+    </form>
+
+    <div
+      style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+        padding: 0 5px;
+      "
+    >
+      <div
+        id="save-option"
+        style="display: flex; align-items: center; gap: 8px"
+      >
+        <input
+          type="checkbox"
+          id="save-check"
+          name="save_to_library"
+          form="add-form-grid"
+          style="accent-color: var(--accent-blue)"
+        />
+        <label
+          for="save-check"
+          style="font-size: 0.8rem; color: #aaa; cursor: pointer"
+          >Save as new Template</label
+        >
+      </div>
+
+      <div
+        id="template-badge"
+        style="
+          display: none;
+          font-size: 0.75rem;
+          color: #4cd137;
+          align-items: center;
+          gap: 5px;
+        "
+      >
+        <i class="fas fa-check-circle"></i> Using Library Template
+      </div>
+    </div>
+  </div>
+
+  <div class="exercise-list">
+    {% for exercise in routine.exercises %}
+    <div
+      class="exercise-card"
+      onclick="toggleMedia(this)"
+      style="flex-wrap: wrap; cursor: pointer"
+    >
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          width: 100%;
+          align-items: center;
+        "
+      >
+        <div class="exercise-info">
+          <h4 style="display: flex; align-items: center; gap: 8px">
+            {{ exercise.name }} {% if exercise.library_item %} {% if
+            exercise.library_item.video_url or
+            exercise.library_item.image_filename %}
+            <i
+              class="fas fa-film"
+              style="font-size: 0.8rem; color: var(--accent-blue); opacity: 0.8"
+              title="View Guide"
+            ></i>
+            {% endif %} {% else %}
+            <a
+              href="{{ url_for('gym.promote_exercise', exercise_id=exercise.id) }}"
+              onclick="event.stopPropagation()"
+              style="font-size: 0.8rem; color: #666; transition: 0.2s"
+              title="Save to Library"
+              onmouseover="this.style.color = '#4cd137'"
+              onmouseout="this.style.color = '#666'"
+            >
+              <i class="fas fa-save"></i>
+            </a>
+            {% endif %}
+          </h4>
+        </div>
+
+        <div class="exercise-meta">
+          <div class="set-rep-badge">
+            {{ exercise.target_sets }} x {{ exercise.target_reps }}
+          </div>
+          <a
+            href="{{ url_for('gym.delete_exercise', exercise_id=exercise.id) }}"
+            class="btn-delete-icon"
+            onclick="event.stopPropagation()"
+            ><i class="fas fa-trash"></i
+          ></a>
+        </div>
+      </div>
+
+      {% if exercise.library_item and (exercise.library_item.image_filename or
+      exercise.library_item.video_url) %}
+      <div
+        class="media-drawer"
+        style="
+          width: 100%;
+          display: none;
+          margin-top: 15px;
+          border-top: 1px solid rgba(255, 255, 255, 0.05);
+          padding-top: 15px;
+          animation: fadeIn 0.3s ease;
+        "
+      >
+        <div style="display: flex; gap: 15px; align-items: flex-start">
+          {% if exercise.library_item.image_filename %}
+          <div style="flex: 1; max-width: 150px">
+            <img
+              src="{{ url_for('static', filename='uploads/gym/' + exercise.library_item.image_filename) }}"
+              style="
+                width: 100%;
+                border-radius: 8px;
+                border: 1px solid #444;
+                display: block;
+              "
+            />
+          </div>
+          {% endif %}
+
+          <div
+            style="
+              flex: 2;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              gap: 10px;
+            "
+          >
+            {% if exercise.library_item.video_url %}
+            <a
+              href="{{ exercise.library_item.video_url }}"
+              target="_blank"
+              onclick="event.stopPropagation()"
+              class="btn-sm"
+              style="
+                background: #c4302b;
+                color: white;
+                width: fit-content;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 12px;
+              "
+            >
+              <i class="fab fa-youtube"></i> Watch Tutorial
+            </a>
+            {% endif %}
+
+            <div style="font-size: 0.8rem; color: #888; font-style: italic">
+              <i class="fas fa-info-circle"></i> Check your form carefully.
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div
+      style="
+        text-align: center;
+        padding: 30px;
+        color: #666;
+        font-style: italic;
+        border: 1px dashed rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+      "
+    >
+      No exercises added.
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  function toggleMedia(card) {
+    const drawer = card.querySelector(".media-drawer");
+    if (drawer) {
+      // Simple toggle
+      if (drawer.style.display === "none") {
+        drawer.style.display = "block";
+      } else {
+        drawer.style.display = "none";
+      }
+    }
+  }
+</script>
+
+<script src="{{ url_for('static', filename='gym/js/routine_detail.js') }}"></script>
+
+<style>
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
+{% endblock %}

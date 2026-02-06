@@ -1,0 +1,510 @@
+{
+    "user": [
+        {
+            "id": 1,
+            "username": "jorg",
+            "email": "jorg@mybrain.com",
+            "password": "pbkdf2:sha256:1000000$aa6TJUOPbJUPD7v4$5cbf4b6657dfdd5e27c4516a0d0365cf29c1871e54436688c96ba37cf807799c",
+            "role": "dev",
+            "current_gym_day": 1
+        }
+    ],
+    "gym_program": [
+        {
+            "id": 1,
+            "user_id": 1,
+            "name": "My First Program",
+            "is_active": 0,
+            "created_at": "2026-02-05 23:11:11.879766"
+        },
+        {
+            "id": 2,
+            "user_id": 1,
+            "name": "Cardio",
+            "is_active": 0,
+            "created_at": "2026-02-05 23:25:44.802821"
+        },
+        {
+            "id": 3,
+            "user_id": 1,
+            "name": "Copy of My First Program",
+            "is_active": 0,
+            "created_at": "2026-02-05 23:26:48.604309"
+        },
+        {
+            "id": 4,
+            "user_id": 1,
+            "name": "Test from scratch",
+            "is_active": 1,
+            "created_at": "2026-02-05 23:34:42.706785"
+        }
+    ],
+    "gym_exercise_library": [
+        {
+            "id": 1,
+            "user_id": 1,
+            "name_en": "Testing a new exercise",
+            "name_es": "",
+            "default_sets": 3,
+            "default_reps": "8-12",
+            "notes_ref": null
+        },
+        {
+            "id": 2,
+            "user_id": 1,
+            "name_en": "Just a simple exercise ",
+            "name_es": "",
+            "default_sets": 3,
+            "default_reps": "8-12",
+            "notes_ref": null
+        },
+        {
+            "id": 3,
+            "user_id": 1,
+            "name_en": "Curl",
+            "name_es": "",
+            "default_sets": 3,
+            "default_reps": "",
+            "notes_ref": null
+        }
+    ],
+    "task": [
+        {
+            "id": 2,
+            "content": "Testing work",
+            "priority": "normal",
+            "category": "work",
+            "complete": 1,
+            "created_date": "2026-01-23 17:28:34",
+            "due_date": null,
+            "last_completed": "2026-01-28 12:43:51.261684",
+            "color": "#3b5bdb",
+            "recurrence": "none",
+            "is_habit": 0,
+            "user_id": 1
+        },
+        {
+            "id": 3,
+            "content": "Regular test",
+            "priority": "normal",
+            "category": "health",
+            "complete": 0,
+            "created_date": "2026-01-23 17:28:55",
+            "due_date": "2026-01-28 00:00:00.000000",
+            "last_completed": "2026-02-04 16:50:24.832631",
+            "color": "#3b5bdb",
+            "recurrence": "daily",
+            "is_habit": 1,
+            "user_id": 1
+        },
+        {
+            "id": 4,
+            "content": "Testing Habit task",
+            "priority": "normal",
+            "category": "general",
+            "complete": 0,
+            "created_date": "2026-01-28 11:49:00",
+            "due_date": "2026-01-28 00:00:00.000000",
+            "last_completed": "2026-01-28 13:33:54.642204",
+            "color": "#3b5bdb",
+            "recurrence": "daily",
+            "is_habit": 1,
+            "user_id": 1
+        },
+        {
+            "id": 5,
+            "content": "Testing weekly routine thing ",
+            "priority": "normal",
+            "category": "personal",
+            "complete": 1,
+            "created_date": "2026-01-28 12:51:43",
+            "due_date": "2026-01-28 00:00:00.000000",
+            "last_completed": "2026-01-28 13:51:49.684706",
+            "color": "#9b59b6",
+            "recurrence": "weekly",
+            "is_habit": 1,
+            "user_id": 1
+        },
+        {
+            "id": 6,
+            "content": "Just a task",
+            "priority": "normal",
+            "category": "general",
+            "complete": 1,
+            "created_date": "2026-01-28 18:13:15",
+            "due_date": null,
+            "last_completed": "2026-02-04 10:14:40.620463",
+            "color": "#3b5bdb",
+            "recurrence": "none",
+            "is_habit": 0,
+            "user_id": 1
+        },
+        {
+            "id": 7,
+            "content": "Just another task",
+            "priority": "normal",
+            "category": "general",
+            "complete": 1,
+            "created_date": "2026-01-28 18:13:21",
+            "due_date": null,
+            "last_completed": "2026-01-28 19:13:23.400538",
+            "color": "#3b5bdb",
+            "recurrence": "none",
+            "is_habit": 0,
+            "user_id": 1
+        },
+        {
+            "id": 8,
+            "content": "A personal task",
+            "priority": "normal",
+            "category": "personal",
+            "complete": 1,
+            "created_date": "2026-01-28 18:13:33",
+            "due_date": null,
+            "last_completed": "2026-01-28 19:13:37.599436",
+            "color": "#3b5bdb",
+            "recurrence": "none",
+            "is_habit": 0,
+            "user_id": 1
+        }
+    ],
+    "gym_routine": [
+        {
+            "id": 1,
+            "user_id": 1,
+            "program_id": 1,
+            "name": "Push",
+            "order_index": 1,
+            "notes": null
+        },
+        {
+            "id": 2,
+            "user_id": 1,
+            "program_id": 1,
+            "name": "Legs",
+            "order_index": 2,
+            "notes": null
+        },
+        {
+            "id": 3,
+            "user_id": 1,
+            "program_id": 1,
+            "name": "Testing another Day",
+            "order_index": 4,
+            "notes": null
+        },
+        {
+            "id": 4,
+            "user_id": 1,
+            "program_id": 1,
+            "name": "Testing another Day (Copy)",
+            "order_index": 3,
+            "notes": null
+        },
+        {
+            "id": 5,
+            "user_id": 1,
+            "program_id": 3,
+            "name": "Push",
+            "order_index": 1,
+            "notes": null
+        },
+        {
+            "id": 6,
+            "user_id": 1,
+            "program_id": 3,
+            "name": "Legs",
+            "order_index": 2,
+            "notes": null
+        },
+        {
+            "id": 7,
+            "user_id": 1,
+            "program_id": 3,
+            "name": "Testing another Day",
+            "order_index": 3,
+            "notes": null
+        },
+        {
+            "id": 8,
+            "user_id": 1,
+            "program_id": 3,
+            "name": "Testing another Day (Copy)",
+            "order_index": 4,
+            "notes": null
+        },
+        {
+            "id": 9,
+            "user_id": 1,
+            "program_id": 1,
+            "name": "Rest Day",
+            "order_index": 5,
+            "notes": null
+        },
+        {
+            "id": 10,
+            "user_id": 1,
+            "program_id": 1,
+            "name": "Rest Day",
+            "order_index": 6,
+            "notes": null
+        },
+        {
+            "id": 11,
+            "user_id": 1,
+            "program_id": 1,
+            "name": "Rest Day",
+            "order_index": 7,
+            "notes": null
+        },
+        {
+            "id": 12,
+            "user_id": 1,
+            "program_id": 4,
+            "name": "Upper Body",
+            "order_index": 1,
+            "notes": null
+        },
+        {
+            "id": 13,
+            "user_id": 1,
+            "program_id": 4,
+            "name": "Something else",
+            "order_index": 2,
+            "notes": null
+        },
+        {
+            "id": 14,
+            "user_id": 1,
+            "program_id": 4,
+            "name": "Testing another day",
+            "order_index": 3,
+            "notes": null
+        },
+        {
+            "id": 15,
+            "user_id": 1,
+            "program_id": 4,
+            "name": "Rest Day",
+            "order_index": 4,
+            "notes": null
+        },
+        {
+            "id": 16,
+            "user_id": 1,
+            "program_id": 4,
+            "name": "Rest Day",
+            "order_index": 5,
+            "notes": null
+        },
+        {
+            "id": 17,
+            "user_id": 1,
+            "program_id": 4,
+            "name": "Rest Day",
+            "order_index": 6,
+            "notes": null
+        },
+        {
+            "id": 18,
+            "user_id": 1,
+            "program_id": 4,
+            "name": "Rest Day",
+            "order_index": 7,
+            "notes": null
+        }
+    ],
+    "task_history": [
+        {
+            "id": 1,
+            "task_id": 3,
+            "completed_date": "2026-01-23",
+            "status": "completed",
+            "user_id": 1
+        },
+        {
+            "id": 2,
+            "task_id": 4,
+            "completed_date": "2026-01-28",
+            "status": "completed",
+            "user_id": 1
+        },
+        {
+            "id": 3,
+            "task_id": 5,
+            "completed_date": "2026-01-28",
+            "status": "completed",
+            "user_id": 1
+        },
+        {
+            "id": 4,
+            "task_id": 5,
+            "completed_date": "2026-01-15",
+            "status": "completed",
+            "user_id": 1
+        },
+        {
+            "id": 5,
+            "task_id": 5,
+            "completed_date": "2026-01-12",
+            "status": "completed",
+            "user_id": 1
+        },
+        {
+            "id": 6,
+            "task_id": 5,
+            "completed_date": "2026-01-10",
+            "status": "completed",
+            "user_id": 1
+        },
+        {
+            "id": 7,
+            "task_id": 5,
+            "completed_date": "2026-01-07",
+            "status": "completed",
+            "user_id": 1
+        },
+        {
+            "id": 8,
+            "task_id": 5,
+            "completed_date": "2026-01-05",
+            "status": "completed",
+            "user_id": 1
+        },
+        {
+            "id": 9,
+            "task_id": 5,
+            "completed_date": "2026-01-02",
+            "status": "completed",
+            "user_id": 1
+        },
+        {
+            "id": 10,
+            "task_id": 5,
+            "completed_date": "2026-01-18",
+            "status": "completed",
+            "user_id": 1
+        },
+        {
+            "id": 11,
+            "task_id": 4,
+            "completed_date": "2026-01-16",
+            "status": "completed",
+            "user_id": 1
+        },
+        {
+            "id": 12,
+            "task_id": 4,
+            "completed_date": "2026-01-19",
+            "status": "completed",
+            "user_id": 1
+        },
+        {
+            "id": 13,
+            "task_id": 3,
+            "completed_date": "2026-02-04",
+            "status": "completed",
+            "user_id": 1
+        },
+        {
+            "id": 14,
+            "task_id": 9,
+            "completed_date": "2026-02-03",
+            "status": "completed",
+            "user_id": 1
+        }
+    ],
+    "gym_exercise": [
+        {
+            "id": 1,
+            "routine_id": 1,
+            "library_id": null,
+            "name": "Bells",
+            "name_es_display": null,
+            "target_sets": 3,
+            "target_reps": "12"
+        },
+        {
+            "id": 2,
+            "routine_id": 1,
+            "library_id": null,
+            "name": "Something else",
+            "name_es_display": null,
+            "target_sets": 3,
+            "target_reps": "8-12"
+        },
+        {
+            "id": 3,
+            "routine_id": 1,
+            "library_id": 1,
+            "name": "Testing a new exercise",
+            "name_es_display": "",
+            "target_sets": 3,
+            "target_reps": "8-12"
+        },
+        {
+            "id": 4,
+            "routine_id": 3,
+            "library_id": 2,
+            "name": "Just a simple exercise ",
+            "name_es_display": "",
+            "target_sets": 3,
+            "target_reps": "8-12"
+        },
+        {
+            "id": 5,
+            "routine_id": 4,
+            "library_id": 2,
+            "name": "Just a simple exercise ",
+            "name_es_display": "",
+            "target_sets": 3,
+            "target_reps": "8-12"
+        },
+        {
+            "id": 6,
+            "routine_id": 5,
+            "library_id": null,
+            "name": "Bells",
+            "name_es_display": null,
+            "target_sets": 3,
+            "target_reps": "12"
+        },
+        {
+            "id": 7,
+            "routine_id": 5,
+            "library_id": null,
+            "name": "Something else",
+            "name_es_display": null,
+            "target_sets": 3,
+            "target_reps": "8-12"
+        },
+        {
+            "id": 8,
+            "routine_id": 5,
+            "library_id": 1,
+            "name": "Testing a new exercise",
+            "name_es_display": "",
+            "target_sets": 3,
+            "target_reps": "8-12"
+        },
+        {
+            "id": 9,
+            "routine_id": 7,
+            "library_id": 2,
+            "name": "Just a simple exercise ",
+            "name_es_display": "",
+            "target_sets": 3,
+            "target_reps": "8-12"
+        },
+        {
+            "id": 10,
+            "routine_id": 8,
+            "library_id": 2,
+            "name": "Just a simple exercise ",
+            "name_es_display": "",
+            "target_sets": 3,
+            "target_reps": "8-12"
+        }
+    ],
+    "gym_log": []
+}

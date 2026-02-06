@@ -1,0 +1,280 @@
+{% extends "base.html" %} {% block content %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='gym/css/gym.css') }}"
+/>
+
+<div class="dashboard-content" style="max-width: 800px; margin: 0 auto">
+  <div class="gym-header-wrapper">
+    <div
+      class="welcome-banner"
+      style="
+        margin: 0;
+        padding: 0;
+        background: none;
+        text-align: left;
+        align-items: start;
+      "
+    >
+      <a
+        href="{{ url_for('gym.programs') }}"
+        style="text-decoration: none; display: block"
+      >
+        <div
+          style="
+            font-size: 0.75rem;
+            color: var(--accent-blue);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          "
+        >
+          ACTIVE PROGRAM
+          <i class="fas fa-chevron-right" style="font-size: 0.7em"></i>
+        </div>
+        <h1
+          class="gym-title"
+          style="
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-block;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+          "
+        >
+          {{ program.name }}
+          <i
+            class="fas fa-exchange-alt"
+            style="
+              font-size: 0.5em;
+              vertical-align: middle;
+              opacity: 0.5;
+              margin-left: 10px;
+            "
+          ></i>
+        </h1>
+      </a>
+      <p class="gym-subtitle">
+        Current: Day {{ current_user.current_gym_day }} of 7
+      </p>
+    </div>
+
+    <div style="display: flex; gap: 10px">
+      <a
+        href="{{ url_for('gym.library') }}"
+        class="btn-sm"
+        style="
+          background: rgba(255, 255, 255, 0.1);
+          color: #ccc;
+          text-decoration: none;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        "
+      >
+        <i class="fas fa-book"></i> Library
+      </a>
+    </div>
+  </div>
+
+  {% if next_routine and next_routine.name != 'Rest Day' %}
+  <div class="card-glass hero-card">
+    <div style="display: flex; align-items: center; gap: 20px">
+      <div class="hero-icon-circle"><i class="fas fa-fire"></i></div>
+      <div>
+        <span class="hero-label">Up Next</span>
+        <h2 class="hero-title">{{ next_routine.name }}</h2>
+      </div>
+    </div>
+    <div class="hero-actions">
+      <a
+        href="{{ url_for('gym.view_routine', routine_id=next_routine.id) }}"
+        class="btn-save"
+        style="text-decoration: none; padding: 10px 20px"
+        >Start</a
+      >
+      <a
+        href="{{ url_for('gym.skip_day') }}"
+        class="btn-cancel"
+        style="text-decoration: none; background: rgba(255, 255, 255, 0.05)"
+        >Skip</a
+      >
+    </div>
+  </div>
+  {% elif next_routine %}
+  <div
+    class="card-glass hero-card"
+    style="border-color: #444; background: rgba(255, 255, 255, 0.02)"
+  >
+    <div style="display: flex; align-items: center; gap: 20px">
+      <div class="hero-icon-circle" style="background: #444; box-shadow: none">
+        <i class="fas fa-bed"></i>
+      </div>
+      <div>
+        <span class="hero-label" style="color: #888">Up Next</span>
+        <h2 class="hero-title" style="color: #aaa">Rest Day</h2>
+      </div>
+    </div>
+    <div class="hero-actions">
+      <a
+        href="{{ url_for('gym.skip_day') }}"
+        class="btn-save"
+        style="text-decoration: none"
+        >Complete Rest</a
+      >
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="routine-list">
+    {% for routine in routines %} {% if routine.name == 'Rest Day' %}
+    <div
+      class="card-glass routine-row"
+      style="opacity: 0.6; border: 1px dashed #444"
+      onclick="openRenameModal({{ routine.id }}, '{{ routine.name }}')"
+    >
+      <div style="display: flex; align-items: center; gap: 20px">
+        <div class="day-badge" style="color: #666">
+          DAY {{ routine.order_index }}
+        </div>
+        <div class="routine-name" style="color: #888; font-style: italic">
+          Rest Day
+          <span
+            style="
+              font-size: 0.7em;
+              margin-left: 10px;
+              border: 1px solid #444;
+              padding: 2px 6px;
+              border-radius: 4px;
+            "
+            >Tap to Assign</span
+          >
+        </div>
+      </div>
+      <div
+        style="display: flex; flex-direction: column; gap: 2px"
+        onclick="event.stopPropagation()"
+      >
+        {% if loop.index > 1 %}<a
+          href="{{ url_for('gym.swap_routine', routine_id=routine.id, direction='up') }}"
+          style="color: #666; font-size: 0.7rem"
+          ><i class="fas fa-chevron-up"></i></a
+        >{% endif %} {% if loop.index < 7 %}<a
+          href="{{ url_for('gym.swap_routine', routine_id=routine.id, direction='down') }}"
+          style="color: #666; font-size: 0.7rem"
+          ><i class="fas fa-chevron-down"></i></a
+        >{% endif %}
+      </div>
+    </div>
+
+    {% else %}
+    <div
+      class="card-glass routine-row {{ 'active-row' if next_routine and routine.id == next_routine.id else '' }}"
+      onclick="window.location.href='{{ url_for('gym.view_routine', routine_id=routine.id) }}'"
+    >
+      <div style="display: flex; align-items: center; gap: 20px">
+        <div class="day-badge">DAY {{ routine.order_index }}</div>
+        <div class="routine-name">
+          {{ routine.name }}
+          <div class="routine-meta">
+            {{ routine.exercises|length }} Exercises
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 15px">
+        <div
+          style="display: flex; flex-direction: column; gap: 2px"
+          onclick="event.stopPropagation()"
+        >
+          {% if loop.index > 1 %}<a
+            href="{{ url_for('gym.swap_routine', routine_id=routine.id, direction='up') }}"
+            style="color: #666; font-size: 0.7rem"
+            ><i class="fas fa-chevron-up"></i></a
+          >{% endif %} {% if loop.index < 7 %}<a
+            href="{{ url_for('gym.swap_routine', routine_id=routine.id, direction='down') }}"
+            style="color: #666; font-size: 0.7rem"
+            ><i class="fas fa-chevron-down"></i></a
+          >{% endif %}
+        </div>
+
+        <button
+          class="btn-sm"
+          style="background: none; border: 1px solid rgba(255, 255, 255, 0.1)"
+          onclick="event.stopPropagation(); openRenameModal({{ routine.id }}, '{{ routine.name }}')"
+        >
+          <i class="fas fa-pen"></i>
+        </button>
+        <i class="fas fa-chevron-right" style="color: #444"></i>
+      </div>
+    </div>
+    {% endif %} {% endfor %}
+  </div>
+</div>
+
+<div id="rename-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Assign Day</h3>
+    <form id="rename-form" method="POST">
+      <label>Workout Name</label>
+      <input
+        type="text"
+        id="routine-name-input"
+        name="name"
+        placeholder="e.g. Upper Body Power"
+        required
+      />
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="btn-cancel"
+          onclick="
+            document.getElementById('rename-modal').classList.remove('active')
+          "
+        >
+          Cancel
+        </button>
+        <button type="submit" class="btn-save">Save</button>
+      </div>
+    </form>
+    <div style="text-align: center; margin-top: 15px">
+      <button
+        onclick="setRestDay()"
+        style="
+          background: none;
+          border: none;
+          color: #666;
+          font-size: 0.8rem;
+          cursor: pointer;
+          text-decoration: underline;
+        "
+      >
+        Reset to Rest Day
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openRenameModal(id, currentName) {
+    document.getElementById("rename-form").action =
+      `/gym/routine/update_name/${id}`;
+    document.getElementById("routine-name-input").value =
+      currentName === "Rest Day" ? "" : currentName;
+    document.getElementById("rename-modal").classList.add("active");
+  }
+
+  function setRestDay() {
+    document.getElementById("routine-name-input").value = "Rest Day";
+    document.getElementById("rename-form").submit();
+  }
+
+  // Close modal on outside click
+  window.onclick = function (event) {
+    const modal = document.getElementById("rename-modal");
+    if (event.target == modal) modal.classList.remove("active");
+  };
+</script>
+{% endblock %}

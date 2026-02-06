@@ -15,6 +15,8 @@ class User(UserMixin, db.Model):
     tasks = db.relationship('Task', backref='user', lazy=True)
     habits = db.relationship('TaskHistory', backref='user', lazy=True)
     role = db.Column(db.String(20), default='user')  # Options: 'user', 'dev'
+    # Tracks if user is on Day 1, Day 2, etc.
+    current_gym_day = db.Column(db.Integer, default=1)
 
 
 class Task(db.Model):

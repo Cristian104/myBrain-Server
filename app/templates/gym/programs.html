@@ -1,0 +1,107 @@
+{% extends "base.html" %} {% block content %}
+<div class="dashboard-content" style="max-width: 900px; margin: 0 auto">
+  <div class="welcome-banner" style="margin-bottom: 30px">
+    <h1>Program Manager</h1>
+    <p>Manage your monthly cycles and templates.</p>
+  </div>
+
+  <div style="display: flex; gap: 15px; margin-bottom: 30px">
+    <button
+      onclick="
+        document.getElementById('new-program-modal').classList.add('active')
+      "
+      class="btn-save"
+    >
+      <i class="fas fa-plus"></i> New Month / Program
+    </button>
+  </div>
+
+  <div style="display: grid; gap: 15px">
+    {% for program in programs %}
+    <div
+      class="card-glass"
+      style="display: flex; justify-content: space-between; align-items: center; border: 1px solid {{ 'var(--accent-blue)' if program.is_active else 'transparent' }};"
+    >
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <h3 style="margin: 0">{{ program.name }}</h3>
+          {% if program.is_active %}
+          <span
+            class="badge-mini"
+            style="background: var(--accent-blue); color: white"
+            >ACTIVE</span
+          >
+          {% endif %}
+        </div>
+        <p style="color: #888; margin-top: 5px">
+          {{ program.routines|length }} Routines • Created {{
+          program.created_at.strftime('%Y-%m-%d') }}
+        </p>
+      </div>
+
+      <div style="display: flex; gap: 10px">
+        {% if not program.is_active %}
+        <a
+          href="{{ url_for('gym.activate_program', program_id=program.id) }}"
+          class="btn-sm"
+          style="background: rgba(255, 255, 255, 0.1)"
+          >Select</a
+        >
+        {% endif %}
+
+        <form
+          action="{{ url_for('gym.duplicate_program', program_id=program.id) }}"
+          method="POST"
+          style="margin: 0"
+        >
+          <button
+            type="submit"
+            class="btn-sm"
+            title="Duplicate Full Month"
+            style="background: rgba(255, 255, 255, 0.05); color: #aaa"
+          >
+            <i class="fas fa-copy"></i>
+          </button>
+        </form>
+
+        <a
+          href="#"
+          class="btn-sm"
+          style="color: #e74c3c; background: rgba(231, 76, 60, 0.1)"
+          ><i class="fas fa-trash"></i
+        ></a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div id="new-program-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Create New Program</h3>
+    <form action="{{ url_for('gym.create_program') }}" method="POST">
+      <label>Program Name</label>
+      <input
+        type="text"
+        name="name"
+        placeholder="e.g. February 2026 - Strength"
+        required
+      />
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="btn-cancel"
+          onclick="
+            document
+              .getElementById('new-program-modal')
+              .classList.remove('active')
+          "
+        >
+          Cancel
+        </button>
+        <button type="submit" class="btn-save">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

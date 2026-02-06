@@ -4,7 +4,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from flask import current_app
 import threading
 import time
-from . import db
+from app.extensions import db
 from .models import Task, TaskHistory
 from datetime import datetime, timezone
 

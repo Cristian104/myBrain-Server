@@ -1,7 +1,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import current_app
 from datetime import datetime, timedelta, timezone, time
-from . import db
+from app.extensions import db
 from .models import Task, TaskHistory, User
 from .telegram_bot import send_telegram_message, send_telegram_photo
 from PIL import Image, ImageDraw
