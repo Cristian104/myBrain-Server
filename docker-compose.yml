@@ -1,22 +1,14 @@
-version: '3.8'
-
 services:
   mybrain:
     build: .
     container_name: mybrain-server
     restart: unless-stopped
     ports:
-      - "5000:5000"  # Keep this for direct access or internal proxy
+      - "5000:5000"  # Cloudflare proxies directly to this port
     volumes:
-      - ./instance:/app/instance
+      - ./instance:/app/instance  # Persists your SQLite DB
     env_file:
-      - .env  # <--- ADD THIS: Loads your Telegram secrets into the Flask app
+      - .env  # <--- Loads TELEGRAM_BOT_TOKEN, CHAT_ID, etc. securely
     environment:
       - TZ=Europe/Warsaw
-      - ENABLE_BOT=true  # Good to have – you can conditionally start the bot in code if needed
-
-  web:  # Assuming this is your Nginx reverse proxy
-    # Your existing config here (image, ports 80:80 / 443:443, depends_on, volumes for nginx conf, etc.)
-    env_file:
-      - .env  # Optional: Keep if Nginx needs any vars; remove if not
-    # ... rest of your web service config (e.g., depends_on: mybrain, etc.)
+      - ENABLE_BOT=true
