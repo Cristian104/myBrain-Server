@@ -1,3 +1,4 @@
+import os
 import telebot
 from . import state
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -9,9 +10,8 @@ from .models import Task, TaskHistory
 from datetime import datetime, timezone
 
 # --- CONFIGURATION ---
-# (Replace with your actual token/chat_id or load from config)
-BOT_TOKEN = "8420186537:AAHeaf9XcXywWBZ9mZ9tD6q9kSRxzvij3Ts"
-CHAT_ID = "7585332236"
+BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 # Initialize the Bot
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)

@@ -6,9 +6,17 @@ services:
     container_name: mybrain-server
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "5000:5000"  # Keep this for direct access or internal proxy
     volumes:
       - ./instance:/app/instance
+    env_file:
+      - .env  # <--- ADD THIS: Loads your Telegram secrets into the Flask app
     environment:
       - TZ=Europe/Warsaw
-      - ENABLE_BOT=true  # <--- ADD THIS LINE
+      - ENABLE_BOT=true  # Good to have – you can conditionally start the bot in code if needed
+
+  web:  # Assuming this is your Nginx reverse proxy
+    # Your existing config here (image, ports 80:80 / 443:443, depends_on, volumes for nginx conf, etc.)
+    env_file:
+      - .env  # Optional: Keep if Nginx needs any vars; remove if not
+    # ... rest of your web service config (e.g., depends_on: mybrain, etc.)
