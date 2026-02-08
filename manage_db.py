@@ -178,4 +178,15 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "backup":
+        backup_database()
+        print("✅ JSON backup completed: full_backup.json")
+    else:
+        # Full migration mode (your original logic)
+        if backup_database() is None:
+            if input("Create new DB anyway? (y/n): ").lower() != 'y':
+                sys.exit(0)
+
+        if recreate_database():
+            restore_data()
+            print_summary()
