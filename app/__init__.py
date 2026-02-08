@@ -1,16 +1,24 @@
-from app.modules.gym.routes import gym_bp
-from app.modules.auth.routes import auth_bp
-from app.modules.dashboard.routes import dashboard_bp
 import os
 from flask import Flask
+
+# Extensions & Models (import early for init)
 from app.extensions import db, login_manager
+from app.models import User
+
+# Blueprints (import after app creation to avoid circular issues)
+from app.modules.auth.routes import auth_bp
+from app.modules.dashboard.routes import dashboard_bp
+from app.modules.gym.routes import gym_bp
+from app.modules.tasks.routes import tasks_bp  # ← NEW: Tasks/Reminders module
 
 
 def create_app():
     app = Flask(__name__)
 
-    # Secret Key
-    app.config['SECRET_KEY'] = 'f28df1df3969656a76704e28b9dbaa75e93dabc80853267c8e6c0e9ddd6c415a'
+    # --- SECURE CONFIG FROM .ENV ---
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+    if not app.config['SECRET_KEY']:
+        raise ValueError("❌ SECRET_KEY must be set in .env!")
 
     # Database Config
     db_path = os.path.join(app.instance_path, 'db.sqlite')
@@ -28,34 +36,25 @@ def create_app():
     login_manager.login_view = 'auth.login'
 
     # User Loader
-    from app.models import User
-
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # --- REGISTER BLUEPRINTS (THE NEW WIRING) ---
-
-    # 1. Auth Module
+    # --- REGISTER BLUEPRINTS ---
     app.register_blueprint(auth_bp)
-
-    # 2. Dashboard Module
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(gym_bp)         # Your gym tracker module
+    app.register_blueprint(tasks_bp)       # ← NEW: Separate reminders/to-do module
 
-    # 3. Gym Module (👇 ADDED THIS)
-    app.register_blueprint(gym_bp)
-
-    # --------------------------------------------
-
-    # Start Bot Listener
-    if os.environ.get('ENABLE_BOT') == 'true':
-        if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    # Start Bot Listener (only in prod or proper debug)
+    if os.getenv('ENABLE_BOT') == 'true':
+        if not app.debug or os.getenv('WERKZEUG_RUN_MAIN') == 'true':
             from app.telegram_bot import start_bot_listener
             start_bot_listener(app)
 
     # Start Scheduler
     from app.scheduler import start_scheduler
-    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    if not app.debug or os.getenv('WERKZEUG_RUN_MAIN') == 'true':
         start_scheduler(app)
 
     return app
