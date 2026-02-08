@@ -251,30 +251,79 @@ function editTask(element) {
 }
 
 function submitTaskForm() {
-    const content = document.getElementById('m-content').value;
+    const content = document.getElementById('m-content').value.trim();
     const priority = document.getElementById('m-priority').value;
-    const date = document.getElementById('m-date').value;
+    const date = document.getElementById('m-date').value;  // YYYY-MM-DD
+    const time = document.getElementById('m-time')?.value || '08:00';  // Default 8 AM if no input
     const color = document.getElementById('m-color').value;
     const recurrence = document.getElementById('m-recurrence').value;
     const category = document.getElementById('m-category').value;
     const is_habit = document.getElementById('m-is-habit').checked;
 
-    if (!content) return;
+    if (!content) {
+        alert("Task description is required!");
+        return;
+    }
+
     lastActionTime = Date.now();
 
-    const payload = { content, priority, date, color, recurrence, category, is_habit };
+    // Combine date + time into ISO-like string (or null if no date)
+    const datetime = date ? `${date}T${time}:00` : null;
+
+    // Single payload with 'datetime' key (backend will parse it)
+    const payload = {
+        content,
+        priority,
+        datetime,       // ← New key (replaces 'date')
+        color,
+        recurrence,
+        category,
+        is_habit
+    };
+
     const url = editingTaskId ? `/api/tasks/${editingTaskId}/edit` : '/api/tasks/add';
 
-    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-        .then(res => res.json()).then(data => { if (data.success) location.reload(); });
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success || data.id) {
+            location.reload();  // Refresh to see changes
+        } else {
+            alert("Error saving task");
+        }
+    })
+    .catch(err => {
+        console.error("Save error:", err);
+        alert("Network error – check console");
+    });
 }
 
-function createTaskAPI(content, priority, date, color, category = 'general') {
+function createTaskAPI(content, priority = 'normal', datetime = null, color = '#3b5bdb', category = 'general') {
+    // If datetime not passed, default to today at 08:00
+    if (!datetime) {
+        const today = new Date().toISOString().split('T')[0];
+        datetime = `${today}T08:00:00`;
+    }
+
     lastActionTime = Date.now();
+
+    const payload = { content, priority, datetime, color, category };
+
     fetch('/api/tasks/add', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, priority, date, color, category })
-    }).then(res => res.json()).then(data => { if (data.success) location.reload(); });
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success || data.id) {
+            location.reload();
+        }
+    });
 }
 
 function toggleTask(id) {
@@ -291,21 +340,32 @@ function toggleTask(id) {
                 const taskList = document.getElementById('task-list');
                 row.classList.remove('animating-out');
 
-                if (data.new_state) {
+                if (data.new_state) {  // Now completed
                     row.classList.add('completed');
                     btn.innerHTML = '<i class="fas fa-check"></i>';
+                    // FIX: Re-append to trigger filter refresh (visibility)
                     taskList.appendChild(row);
-                } else {
+                } else {  // Now incomplete
                     row.classList.remove('completed');
                     btn.innerHTML = '';
                     taskList.prepend(row);
-                    row.style.display = 'flex';
+                }
+
+                // FORCE FILTER RE-APPLY (ensures visibility after complete/incomplete)
+                const activePill = document.querySelector('.cat-pill.active');
+                if (activePill) {
+                    const cat = activePill.querySelector('span').innerText.toLowerCase() === 'all' ? 'all' : 
+                                 activePill.onclick.toString().match(/'([^']+)'/)[1];
+                    filterTasks(cat, activePill);
                 }
 
                 syncDataVersion();
                 loadCharts(true);
 
             }, 300);
+        }).catch(err => {
+            console.error("Toggle failed:", err);
+            row.classList.remove('animating-out');
         });
 }
 
@@ -313,8 +373,7 @@ function toggleTask(id) {
 function loadCharts(softUpdate = false) {
     if (!softUpdate) console.log("📊 Loading Charts...");
 
-    fetch('/api/stats/charts').then(res => res.json()).then(data => {
-        // --- A. RADIAL CHARTS (Mobile Optimized) ---
+    fetch('/api/tasks/charts').then(res => res.json()).then(data => {        // --- A. RADIAL CHARTS (Mobile Optimized) ---
         const radialContainer = document.getElementById('radial-chart'); 
         if (radialContainer) {
             // 1. Calculate Average
